@@ -58,19 +58,18 @@ html,body{
 
 .stage{
   position:fixed;inset:0;
-  display:flex;align-items:center;justify-content:center;
-  perspective:1100px;
+  perspective:1000px;
+  perspective-origin:50% 50%;
 }
-.stage-row{
-  display:flex;align-items:center;justify-content:center;
-  gap:44px;
-  transform:scale(1);
-  transition:transform 0.12s linear;
-  will-change:transform;
+.deck{
+  position:absolute;inset:0;
+  transform-style:preserve-3d;
 }
 .icon{
-  position:relative;
+  position:absolute;
+  left:50%;top:50%;
   width:132px;height:158px;
+  margin:-79px 0 0 -66px;
   border-radius:16px;
   background:
     linear-gradient(160deg, rgba(255,255,255,0.07), rgba(255,255,255,0.01) 40%),
@@ -84,12 +83,10 @@ html,body{
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   gap:14px;
   cursor:pointer;
-  opacity:0.9;
-  transition:transform 0.35s cubic-bezier(.2,.8,.2,1), opacity 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease;
+  will-change:transform, opacity, filter;
+  transition:transform 0.09s linear, opacity 0.09s linear, filter 0.15s linear, box-shadow 0.3s ease, border-color 0.3s ease;
 }
-.icon:hover{
-  transform:translateY(-6px) scale(1.06);
-  opacity:1;
+.icon.in-focus{
   border-color:rgba(214,178,122,0.5);
   box-shadow:
     0 18px 46px rgba(0,0,0,0.45),
@@ -132,7 +129,7 @@ html,body{
 <div class="hint">usa la rueda del mouse para acercarte o alejarte</div>
 
 <div class="stage" id="stage">
-  <div class="stage-row" id="stage-row">
+  <div class="deck" id="deck">
     <div class="icon"><div class="glyph">🕯</div><div class="label">Vela</div></div>
     <div class="icon"><div class="glyph">◷</div><div class="label">Memoria</div></div>
     <div class="icon"><div class="glyph">◈</div><div class="label">Sala</div></div>
@@ -141,7 +138,7 @@ html,body{
 </div>
 
 <div class="caption">
-  Esto no es nada todavía — es solo el primer trazo de <b>orakOS</b>. Un cielo que se mueve despacio, y cuatro formas de cristal en fila, esperando a convertirse en algo. Gira la rueda del mouse hacia adelante para acercarte, hacia atrás para alejarte — como si te movieras a través de la pantalla en vez de solo mirarla.
+  Esto no es nada todavía — es solo el primer trazo de <b>orakOS</b>. Un cielo que se mueve despacio, y cuatro formas de cristal apiladas una detrás de otra. Gira la rueda hacia adelante: la que está al frente avanza hacia ti y desaparece, y la que estaba detrás toma su lugar. Hacia atrás, ocurre al revés.
 </div>
 
 <script>
@@ -223,29 +220,50 @@ function draw(){
 }
 draw();
 
-// La rueda del mouse acerca o aleja toda la pantalla, como si te movieras
-// a través de la profundidad en vez de solo mirarla.
+// Los íconos están todos apilados exactamente uno detrás de otro (misma X, misma Y,
+// distinta profundidad). Girar la rueda hacia adelante empuja al que está al frente
+// hacia la pantalla hasta que desaparece, y el que estaba detrás toma su lugar.
+// Hacia atrás, ocurre lo contrario: el que se había ido regresa y el actual retrocede.
 const icons = Array.from(document.querySelectorAll('.icon'));
-const stageRow = document.getElementById('stage-row');
-let zoom = 1;
-const ZOOM_MIN = 0.55, ZOOM_MAX = 2.4;
+const N = icons.length;
+const SPACING = 260;      // distancia entre cada ícono en la pila
+const NEAR_FADE_START = SPACING * 0.5;   // a partir de aquí empieza a desvanecerse al pasar la pantalla
+const NEAR_FADE_END   = SPACING * 0.95;  // aquí ya desapareció por completo
 
-function applyZoom(){
-  stageRow.style.transform = `scale(${zoom})`;
+let depth = 0;              // 0 = orden inicial; crece al acercarte, N-1 es el límite
+const DEPTH_MIN = 0, DEPTH_MAX = N - 1;
+
+function render(){
+  icons.forEach((icon, i) => {
+    const z = SPACING * (depth - i);
+    let opacity = 1;
+    if(z > NEAR_FADE_START){
+      opacity = 1 - Math.min(1, (z - NEAR_FADE_START) / (NEAR_FADE_END - NEAR_FADE_START));
+    } else if(z < -SPACING * 1.15){
+      const farT = Math.min(1, (-z - SPACING*1.15) / (SPACING*0.9));
+      opacity = 1 - farT * 0.75;
+    }
+    const blur = z < -SPACING*1.15 ? Math.min(3, (-z - SPACING*1.15)/60) : 0;
+    icon.style.transform = `translateZ(${z}px)`;
+    icon.style.opacity = Math.max(0, opacity);
+    icon.style.filter = blur ? `blur(${blur}px)` : '';
+    icon.style.pointerEvents = opacity < 0.15 ? 'none' : 'auto';
+    icon.classList.toggle('in-focus', Math.abs(z) < SPACING*0.18);
+  });
 }
-applyZoom();
+render();
 
 window.addEventListener('wheel', e => {
   e.preventDefault();
-  zoom -= e.deltaY * 0.0014;
-  zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, zoom));
-  applyZoom();
+  depth += e.deltaY * 0.0026;
+  depth = Math.min(DEPTH_MAX, Math.max(DEPTH_MIN, depth));
+  render();
 }, { passive:false });
 
 icons.forEach(icon => {
   icon.addEventListener('click', () => {
     icon.animate(
-      [{transform:'scale(1)'},{transform:'scale(1.08)'},{transform:'scale(1)'}],
+      [{filter:icon.style.filter||'none'},{filter:'brightness(1.4)'},{filter:icon.style.filter||'none'}],
       {duration:380, easing:'cubic-bezier(.2,.8,.2,1)'}
     );
   });
