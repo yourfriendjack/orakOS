@@ -83,6 +83,7 @@ html,body{
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   gap:14px;
   cursor:pointer;
+  transform-origin:left center;
   will-change:transform, opacity, filter;
   transition:transform 0.09s linear, opacity 0.09s linear, filter 0.15s linear, box-shadow 0.3s ease, border-color 0.3s ease;
 }
@@ -301,8 +302,21 @@ function goBack(){
 
 function onIconClick(item, el){
   if(item.children && item.children.length){
-    navStack.push({ items:item.children, label:item.label });
-    renderLevel();
+    // El recuadro se abre hacia un lado, como una puerta sobre su borde
+    // izquierdo, antes de revelar lo que hay dentro.
+    el.style.pointerEvents = 'none';
+    const base = el.style.transform || '';
+    const anim = el.animate(
+      [
+        { transform: base + ' rotateY(0deg)', opacity: el.style.opacity || 1 },
+        { transform: base + ' rotateY(-105deg)', opacity: 0.05 },
+      ],
+      { duration: 460, easing: 'cubic-bezier(.32,.68,.28,1)', fill:'forwards' }
+    );
+    anim.onfinish = () => {
+      navStack.push({ items:item.children, label:item.label });
+      renderLevel();
+    };
   } else {
     el.animate(
       [{filter:'brightness(1)'},{filter:'brightness(1.5)'},{filter:'brightness(1)'}],
