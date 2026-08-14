@@ -211,6 +211,23 @@ html,body{
   text-align:right;
   opacity:0.7;
 }
+.clock{
+  position:fixed;top:60px;right:32px;
+  font-family:'JetBrains Mono',monospace;
+  text-align:right;
+  opacity:0.85;
+}
+.clock .time{
+  font-size:1.4rem;letter-spacing:0.03em;
+  color:var(--ink);
+  font-variant-numeric:tabular-nums;
+}
+.clock .date{
+  font-size:0.56rem;letter-spacing:0.08em;
+  text-transform:uppercase;
+  color:var(--amber-dim);
+  margin-top:2px;
+}
 
 @media (prefers-reduced-motion:reduce){
   .mark .dot{animation:none;}
@@ -224,6 +241,7 @@ html,body{
 <div class="mark"><span class="dot"></span>orakOS &nbsp;·&nbsp; semilla</div>
 <div class="crumb" id="crumb"></div>
 <div class="hint">rueda: acércate o aléjate &nbsp;·&nbsp; clic: entra a una carpeta</div>
+<div class="clock" id="clock"><div class="time" id="clockTime">--:--</div><div class="date" id="clockDate">-- ---</div></div>
 
 <div class="stage" id="stage">
   <div class="deck" id="deck"></div>
@@ -572,4 +590,19 @@ window.addEventListener('wheel', e => {
 }, { passive:false });
 
 renderLevel(true);
+
+// ── Reloj y fecha, siempre vivos ──────────────────────────────────
+const DIAS = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const clockTimeEl = document.getElementById('clockTime');
+const clockDateEl = document.getElementById('clockDate');
+function tickClock(){
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2,'0');
+  const mm = String(now.getMinutes()).padStart(2,'0');
+  clockTimeEl.textContent = `${hh}:${mm}`;
+  clockDateEl.textContent = `${DIAS[now.getDay()]} · ${now.getDate()} ${MESES[now.getMonth()]}`;
+}
+tickClock();
+setInterval(tickClock, 1000);
 </script>
