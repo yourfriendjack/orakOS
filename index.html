@@ -168,11 +168,27 @@ html,body{
 .expanded-window .doc-body{padding:26px 30px;flex:1;}
 .expanded-window .doc-title{font-size:0.85rem;margin-bottom:20px;color:rgba(40,30,20,0.75);}
 .expanded-window .doc-line{height:6px;margin-bottom:12px;}
-.dot{width:11px;height:11px;border-radius:50%;cursor:pointer;transition:filter 0.15s;}
-.dot:hover{filter:brightness(1.25);}
+.dot{width:11px;height:11px;border-radius:50%;cursor:pointer;transition:filter 0.15s, transform 0.15s;display:block;}
+.dot-wrap:hover .dot{filter:brightness(1.3); transform:scale(1.15);}
 .dot-red{background:#e0605a;}
 .dot-yellow{background:#e0b64a;}
 .dot-green{background:#5ab86a;}
+.dot-wrap{position:relative;display:inline-flex;}
+.dot-tip{
+  position:absolute;bottom:calc(100% + 7px);left:50%;
+  transform:translateX(-50%) translateY(4px);
+  background:rgba(15,10,7,0.94);
+  border:1px solid rgba(255,255,255,0.1);
+  color:#f5ecdf;
+  font-family:'JetBrains Mono',monospace;
+  font-size:0.5rem;letter-spacing:0.04em;
+  padding:3px 8px;border-radius:5px;
+  white-space:nowrap;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity 0.15s ease, transform 0.15s ease;
+}
+.dot-wrap:hover .dot-tip{opacity:1;transform:translateX(-50%) translateY(0);}
 .doc-enter{
   margin-top:14px;
   font-family:'JetBrains Mono',monospace;font-size:0.64rem;
@@ -503,9 +519,9 @@ function openWindow(item, rect, bar){
   const lineWidths = [88,64,76,50,70];
   win.innerHTML = `
     <div class="doc-bar" style="background:${bar}">
-      <span class="dot dot-red" title="Cerrar"></span>
-      <span class="dot dot-yellow" title="Minimizar"></span>
-      <span class="dot dot-green" title="Expandir"></span>
+      <span class="dot-wrap"><span class="dot dot-red"></span><span class="dot-tip">cerrar</span></span>
+      <span class="dot-wrap"><span class="dot dot-yellow"></span><span class="dot-tip">minimizar</span></span>
+      <span class="dot-wrap"><span class="dot dot-green"></span><span class="dot-tip">expandir</span></span>
     </div>
     <div class="doc-body">
       <div class="doc-title">${item.label}</div>
