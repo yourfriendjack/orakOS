@@ -229,6 +229,33 @@ html,body{
   margin-top:2px;
 }
 
+/* Dock: lo que quedó minimizado, esperando a que lo vuelvas a abrir */
+.dock{
+  position:fixed;bottom:16px;left:50%;
+  transform:translateX(-50%);
+  display:flex;gap:10px;
+  z-index:15;
+}
+.dock-chip{
+  display:flex;align-items:center;gap:6px;
+  background:var(--glass);
+  border:1px solid var(--glass-border);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  border-radius:20px;
+  padding:6px 12px 6px 8px;
+  cursor:pointer;
+  transition:transform 0.15s ease, border-color 0.15s ease;
+}
+.dock-chip:hover{transform:translateY(-4px); border-color:var(--amber);}
+.dock-dot{width:8px;height:8px;border-radius:50%;flex:none;}
+.dock-label{
+  font-family:'JetBrains Mono',monospace;
+  font-size:0.55rem;letter-spacing:0.03em;
+  color:var(--fog);
+  white-space:nowrap;
+}
+
 @media (prefers-reduced-motion:reduce){
   .mark .dot{animation:none;}
   .icon{transition:none;}
@@ -242,6 +269,7 @@ html,body{
 <div class="crumb" id="crumb"></div>
 <div class="hint">rueda: acércate o aléjate &nbsp;·&nbsp; clic: entra a una carpeta</div>
 <div class="clock" id="clock"><div class="time" id="clockTime">--:--</div><div class="date" id="clockDate">-- ---</div></div>
+<div class="dock" id="dock"></div>
 
 <div class="stage" id="stage">
   <div class="deck" id="deck"></div>
@@ -437,16 +465,34 @@ function goBack(){
   transitionLevel(() => { navStack.pop(); renderLevel(true); });
 }
 
+// ── Dock: lo que quedó minimizado, esperando a que lo vuelvas a abrir ────
+const dockEl = document.getElementById('dock');
+let minimizedDock = [];
+
+function renderDock(){
+  dockEl.innerHTML = '';
+  minimizedDock.forEach(entry => {
+    const chip = document.createElement('div');
+    chip.className = 'dock-chip';
+    chip.innerHTML = `<span class="dock-dot" style="background:${entry.bar}"></span><span class="dock-label">${entry.item.label}</span>`;
+    chip.addEventListener('click', () => reopenFromDock(entry));
+    dockEl.appendChild(chip);
+  });
+}
+function addToDock(item, bar){
+  if(!minimizedDock.find(e => e.item === item)) minimizedDock.push({item, bar});
+  renderDock();
+}
+function removeFromDock(item){
+  const i = minimizedDock.findIndex(e => e.item === item);
+  if(i !== -1){ minimizedDock.splice(i,1); renderDock(); }
+}
+
 // ── Ventana expandida: abrir una carpeta/archivo en grande, con los tres
 // controles reales de la esquina (cerrar, minimizar, expandir) ──────────
 let expandedOverlay = null;
 
-function expandCard(item, el){
-  if(expandedOverlay) return;
-  const idx = Array.from(deckEl.children).indexOf(el);
-  const rect = el.getBoundingClientRect();
-  const bar = BAR_COLORS[idx % BAR_COLORS.length];
-
+function openWindow(item, rect, bar){
   const backdrop = document.createElement('div');
   backdrop.className = 'overlay-backdrop';
   backdrop.addEventListener('click', () => collapseExpanded('close'));
@@ -506,33 +552,55 @@ function expandCard(item, el){
     });
   }
 
-  expandedOverlay = { win, backdrop, el, idx, originRect:rect, finalW, finalH, finalLeft, finalTop };
+  expandedOverlay = { win, backdrop, item, bar, finalW, finalH, finalLeft, finalTop };
+}
+
+function expandCard(item, el){
+  if(expandedOverlay) return;
+  removeFromDock(item); // por si ya estaba minimizada
+  const idx = Array.from(deckEl.children).indexOf(el);
+  const bar = BAR_COLORS[idx % BAR_COLORS.length];
+  openWindow(item, el.getBoundingClientRect(), bar);
+}
+
+function reopenFromDock(entry){
+  if(expandedOverlay) return;
+  const i = minimizedDock.indexOf(entry);
+  const chip = dockEl.children[i];
+  const rect = chip.getBoundingClientRect();
+  removeFromDock(entry.item);
+  openWindow(entry.item, rect, entry.bar);
 }
 
 function collapseExpanded(mode){
   if(!expandedOverlay) return;
-  const { win, backdrop, el, idx, finalW, finalH, finalLeft, finalTop } = expandedOverlay;
+  const { win, backdrop, item, bar, finalW, finalH, finalLeft, finalTop } = expandedOverlay;
   expandedOverlay = null;
   if(mode === 'none'){ win.remove(); backdrop.remove(); return; }
 
   backdrop.style.opacity = '0';
   if(mode === 'close'){
+    removeFromDock(item);
     win.style.transition = 'opacity 0.22s ease, transform 0.22s ease';
     win.style.opacity = '0';
     win.style.transform = win.style.transform + ' scale(0.97)';
+    setTimeout(() => { win.remove(); backdrop.remove(); }, 340);
   } else {
-    // Minimizar: la tarjeta pasa al frente de la escalera (foco) antes de
-    // encogerse hacia ahí, para que sea inconfundible a dónde fue a parar.
-    depth = idx;
-    renderDepth();
-    const originRect = el.getBoundingClientRect();
-    const scaleX = originRect.width/finalW, scaleY = originRect.height/finalH;
-    const dx = originRect.left - finalLeft, dy = originRect.top - finalTop;
-    win.style.transition = 'transform 0.32s cubic-bezier(.3,.7,.3,1), opacity 0.32s ease';
-    win.style.transform = `translate(${dx}px,${dy}px) scale(${scaleX},${scaleY})`;
-    win.style.opacity = '0.5';
+    // Minimizar: se agrega al dock primero (para tener un lugar real al
+    // cual encogerse), y la ventana se anima hacia ese chip.
+    addToDock(item, bar);
+    requestAnimationFrame(() => {
+      const chip = dockEl.lastElementChild;
+      const target = chip ? chip.getBoundingClientRect()
+        : { left:window.innerWidth/2, top:window.innerHeight-30, width:10, height:10 };
+      const scaleX = target.width/finalW, scaleY = target.height/finalH;
+      const dx = target.left - finalLeft, dy = target.top - finalTop;
+      win.style.transition = 'transform 0.32s cubic-bezier(.3,.7,.3,1), opacity 0.32s ease';
+      win.style.transform = `translate(${dx}px,${dy}px) scale(${scaleX},${scaleY})`;
+      win.style.opacity = '0.15';
+      setTimeout(() => { win.remove(); backdrop.remove(); }, 340);
+    });
   }
-  setTimeout(() => { win.remove(); backdrop.remove(); }, 340);
 }
 
 function onIconClick(item, el){
