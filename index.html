@@ -1,0 +1,255 @@
+<title>orakOS — semilla</title>
+<style>
+@font-face{
+  font-family:'Cinzel';
+  src:local('Cinzel');
+}
+:root{
+  --sky-top:#0c0a14;
+  --sky-mid:#1c1430;
+  --sky-low:#2c1a2e;
+  --glass:rgba(30,24,42,0.45);
+  --glass-border:rgba(214,178,122,0.22);
+  --amber:#d6b27a;
+  --amber-dim:rgba(214,178,122,0.55);
+  --fog:rgba(240,232,248,0.5);
+  --ink:#f3ecf9;
+}
+*{box-sizing:border-box;}
+html,body{
+  margin:0;padding:0;height:100%;overflow:hidden;
+  background:var(--sky-top);
+  font-family:'Crimson Pro',Georgia,serif;
+  color:var(--ink);
+}
+#sky{position:fixed;inset:0;display:block;}
+.veil{
+  position:fixed;inset:0;
+  background:radial-gradient(ellipse at 50% 120%, rgba(214,178,122,0.06), transparent 60%);
+  pointer-events:none;
+}
+.mark{
+  position:fixed;top:28px;left:32px;
+  font-family:'Cinzel',Georgia,serif;
+  font-size:0.78rem;letter-spacing:0.18em;
+  text-transform:uppercase;
+  color:var(--amber-dim);
+  display:flex;align-items:center;gap:10px;
+}
+.mark .dot{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--amber);
+  box-shadow:0 0 8px 2px rgba(214,178,122,0.6);
+  animation:breathe 4s ease-in-out infinite;
+}
+@keyframes breathe{
+  0%,100%{opacity:0.55;transform:scale(0.85);}
+  50%{opacity:1;transform:scale(1.1);}
+}
+.caption{
+  position:fixed;bottom:26px;left:32px;right:32px;
+  font-family:'JetBrains Mono',monospace;
+  font-size:0.62rem;letter-spacing:0.04em;
+  color:var(--fog);
+  max-width:560px;
+  line-height:1.6;
+}
+.caption b{color:var(--amber-dim);font-weight:600;}
+
+.stage{
+  position:fixed;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  gap:44px;
+  perspective:900px;
+}
+.icon{
+  --depth:0;
+  position:relative;
+  width:132px;height:158px;
+  border-radius:16px;
+  background:
+    linear-gradient(160deg, rgba(255,255,255,0.07), rgba(255,255,255,0.01) 40%),
+    var(--glass);
+  border:1px solid var(--glass-border);
+  backdrop-filter:blur(14px) saturate(140%);
+  -webkit-backdrop-filter:blur(14px) saturate(140%);
+  box-shadow:
+    0 10px 30px rgba(0,0,0,0.35),
+    inset 0 1px 0 rgba(255,255,255,0.08);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:14px;
+  cursor:pointer;
+  transform:translateZ(0) scale(1);
+  filter:blur(0px) brightness(1);
+  opacity:0.86;
+  transition:transform 0.55s cubic-bezier(.2,.8,.2,1), filter 0.55s ease, opacity 0.55s ease, box-shadow 0.55s ease, border-color 0.55s ease;
+}
+.icon .glyph{
+  font-size:1.7rem;
+  color:var(--amber);
+  font-family:'Cinzel',Georgia,serif;
+  text-shadow:0 0 18px rgba(214,178,122,0.35);
+}
+.icon .label{
+  font-family:'JetBrains Mono',monospace;
+  font-size:0.56rem;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  color:var(--fog);
+}
+.icon.near{
+  transform:translateZ(60px) scale(1.14);
+  opacity:1;
+  border-color:rgba(214,178,122,0.5);
+  box-shadow:
+    0 18px 46px rgba(0,0,0,0.45),
+    0 0 40px rgba(214,178,122,0.12),
+    inset 0 1px 0 rgba(255,255,255,0.14);
+}
+.icon.far{
+  transform:translateZ(-40px) scale(0.9);
+  filter:blur(1.5px) brightness(0.8);
+  opacity:0.55;
+}
+
+.hint{
+  position:fixed;top:28px;right:32px;
+  font-family:'JetBrains Mono',monospace;
+  font-size:0.58rem;letter-spacing:0.06em;
+  color:var(--fog);
+  text-align:right;
+  opacity:0.7;
+}
+
+@media (prefers-reduced-motion:reduce){
+  .mark .dot{animation:none;}
+  .icon{transition:none;}
+}
+</style>
+
+<canvas id="sky"></canvas>
+<div class="veil"></div>
+
+<div class="mark"><span class="dot"></span>orakOS &nbsp;·&nbsp; semilla</div>
+<div class="hint">mueve el cursor entre los íconos</div>
+
+<div class="stage" id="stage">
+  <div class="icon" data-label="Vela"><div class="glyph">🕯</div><div class="label">Vela</div></div>
+  <div class="icon" data-label="Memoria"><div class="glyph">◷</div><div class="label">Memoria</div></div>
+  <div class="icon" data-label="Sala"><div class="glyph">◈</div><div class="label">Sala</div></div>
+  <div class="icon" data-label="Archivos"><div class="glyph">▤</div><div class="label">Archivos</div></div>
+</div>
+
+<div class="caption">
+  Esto no es nada todavía — es solo el primer trazo de <b>orakOS</b>. Un cielo que se mueve despacio, y cuatro formas de cristal esperando a convertirse en algo. Cuando el cursor se acerca, se sale de la fila; cuando se aleja, retrocede. Así se verá, algún día, decidir hacia dónde entrar.
+</div>
+
+<script>
+// Cielo: gradiente de fondo + nubes/partículas a la deriva, muy lento, sin ruido.
+const cv = document.getElementById('sky');
+const ctx = cv.getContext('2d');
+let W, H, DPR;
+function resize(){
+  DPR = Math.min(window.devicePixelRatio||1, 2);
+  W = window.innerWidth; H = window.innerHeight;
+  cv.width = W*DPR; cv.height = H*DPR;
+  cv.style.width = W+'px'; cv.style.height = H+'px';
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+resize();
+window.addEventListener('resize', resize);
+
+const STAR_COUNT = 70;
+const stars = Array.from({length:STAR_COUNT}, () => ({
+  x: Math.random(),
+  y: Math.random()*0.7,
+  r: Math.random()*1.3 + 0.3,
+  phase: Math.random()*Math.PI*2,
+  speed: 0.15 + Math.random()*0.25,
+}));
+
+const CLOUD_COUNT = 5;
+const clouds = Array.from({length:CLOUD_COUNT}, (_, i) => ({
+  x: Math.random(),
+  y: 0.15 + Math.random()*0.5,
+  w: 260 + Math.random()*260,
+  h: 60 + Math.random()*50,
+  drift: 0.0035 + Math.random()*0.004,
+  alpha: 0.05 + Math.random()*0.05,
+}));
+
+let t = 0;
+function draw(){
+  t += 0.016;
+
+  const g = ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0, '#0c0a14');
+  g.addColorStop(0.55, '#1c1430');
+  g.addColorStop(1, '#2c1a2e');
+  ctx.fillStyle = g;
+  ctx.fillRect(0,0,W,H);
+
+  // estrellas, parpadeo lento
+  for(const s of stars){
+    const alpha = 0.25 + 0.35*Math.sin(t*s.speed + s.phase);
+    ctx.beginPath();
+    ctx.fillStyle = `rgba(240,232,248,${Math.max(0,alpha)})`;
+    ctx.arc(s.x*W, s.y*H, s.r, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // nubes suaves a la deriva
+  for(const c of clouds){
+    c.x += c.drift*0.016;
+    if(c.x*W > W + c.w) c.x = -c.w/W;
+    const cx = c.x*W, cy = c.y*H;
+    const grad = ctx.createRadialGradient(cx,cy,0,cx,cy,c.w/2);
+    grad.addColorStop(0, `rgba(214,178,122,${c.alpha})`);
+    grad.addColorStop(1, 'rgba(214,178,122,0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, c.w/2, c.h/2, 0, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // resplandor bajo, tipo horizonte
+  const horizon = ctx.createRadialGradient(W/2, H*1.05, 0, W/2, H*1.05, W*0.75);
+  horizon.addColorStop(0, 'rgba(214,178,122,0.10)');
+  horizon.addColorStop(1, 'rgba(214,178,122,0)');
+  ctx.fillStyle = horizon;
+  ctx.fillRect(0,0,W,H);
+
+  requestAnimationFrame(draw);
+}
+draw();
+
+// Profundidad por proximidad del cursor
+const stage = document.getElementById('stage');
+const icons = Array.from(document.querySelectorAll('.icon'));
+function updateDepth(clientX, clientY){
+  let nearest = null, nearestDist = Infinity;
+  const dists = icons.map(icon => {
+    const r = icon.getBoundingClientRect();
+    const cx = r.left + r.width/2, cy = r.top + r.height/2;
+    const d = Math.hypot(clientX-cx, clientY-cy);
+    if(d < nearestDist){ nearestDist = d; nearest = icon; }
+    return d;
+  });
+  icons.forEach((icon, i) => {
+    icon.classList.remove('near','far');
+    if(dists[i] < 190) icon.classList.add('near');
+    else if(dists[i] > 340) icon.classList.add('far');
+  });
+}
+window.addEventListener('pointermove', e => updateDepth(e.clientX, e.clientY));
+window.addEventListener('pointerleave', () => icons.forEach(i => i.classList.remove('near','far')));
+
+icons.forEach(icon => {
+  icon.addEventListener('click', () => {
+    icon.animate(
+      [{transform:icon.style.transform||'scale(1.14)'},{transform:'scale(1.22)'},{transform:icon.classList.contains('near')?'scale(1.14)':'scale(1)'}],
+      {duration:420, easing:'cubic-bezier(.2,.8,.2,1)'}
+    );
+  });
+});
+</script>
