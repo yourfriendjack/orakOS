@@ -59,7 +59,7 @@ html,body{
 .stage{
   position:fixed;inset:0;
   perspective:1000px;
-  perspective-origin:20% 50%;
+  perspective-origin:14% 78%;
 }
 .deck{
   position:absolute;inset:0;
@@ -67,7 +67,7 @@ html,body{
 }
 .icon{
   position:absolute;
-  left:20%;top:50%;
+  left:14%;top:78%;
   width:132px;height:158px;
   margin:-79px 0 0 -66px;
   border-radius:16px;
@@ -159,7 +159,7 @@ html,body{
 </div>
 
 <div class="caption">
-  Esto no es nada todavía — es solo el primer trazo de <b>orakOS</b>. Un cielo que se mueve despacio, y cuatro formas de cristal apiladas una detrás de otra. Gira la rueda hacia adelante: la que está al frente avanza hacia ti y desaparece, y la que estaba detrás toma su lugar. Hacia atrás, ocurre al revés.
+  Esto no es nada todavía — es solo el primer trazo de <b>orakOS</b>. Un cielo que se mueve despacio, y cuatro formas de cristal en una escalera diagonal de profundidad. Gira la rueda hacia adelante: la que está al frente avanza hacia ti y desaparece, y la siguiente en la escalera baja a tomar su lugar. Hacia atrás, ocurre al revés.
 </div>
 
 <script>
@@ -335,13 +335,19 @@ function onIconClick(item, el){
   }
 }
 
-// Íconos apilados uno detrás de otro (misma X, misma Y, distinta profundidad).
-// Girar la rueda hacia adelante empuja al que está al frente hacia la pantalla
-// hasta que desaparece, y el que estaba detrás toma su lugar. Hacia atrás, al revés.
+// Íconos en escalera diagonal: el que está en foco queda abajo a la izquierda,
+// y los siguientes suben hacia arriba a la derecha, cada vez más chicos y
+// lejanos — como en la referencia. Girar la rueda hacia adelante empuja al
+// que está al frente hacia la pantalla hasta que desaparece, y el que sigue
+// en la escalera baja a tomar su lugar. Hacia atrás, al revés.
+const STEP_X = 78, STEP_Y = 58; // paso de la escalera por cada posición de profundidad
+
 function renderDepth(){
-  const N = icons.length;
   icons.forEach((icon, i) => {
-    const z = SPACING * (depth - i);
+    const rel = i - depth;      // 0 = en foco; positivo = más arriba en la escalera
+    const z  = -SPACING * rel;
+    const dx = rel * STEP_X;
+    const dy = -rel * STEP_Y;
     let opacity = 1;
     if(z > NEAR_FADE_START){
       opacity = 1 - Math.min(1, (z - NEAR_FADE_START) / (NEAR_FADE_END - NEAR_FADE_START));
@@ -350,7 +356,7 @@ function renderDepth(){
       opacity = 1 - farT * 0.75;
     }
     const blur = z < -SPACING*1.15 ? Math.min(3, (-z - SPACING*1.15)/60) : 0;
-    icon.style.transform = `translateZ(${z}px)`;
+    icon.style.transform = `translate3d(${dx}px, ${dy}px, ${z}px)`;
     icon.style.opacity = Math.max(0, opacity);
     icon.style.filter = blur ? `blur(${blur}px)` : '';
     icon.style.pointerEvents = opacity < 0.15 ? 'none' : 'auto';
