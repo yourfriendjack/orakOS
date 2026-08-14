@@ -294,29 +294,39 @@ function renderCrumb(){
   document.getElementById('backBtn').addEventListener('click', goBack);
 }
 
+// Transición tipo "ventana que se abre hacia un lado": el panel completo
+// (el deck actual) sale deslizándose hacia un lado y se desvanece; el nuevo
+// panel entra deslizándose desde el lado opuesto, como una ventana nueva
+// tomando el lugar de la anterior. direction: 1 = adelante, -1 = atrás.
+function transitionLevel(buildFn, direction){
+  const outX = direction === 1 ? -130 : 130;
+  const inX  = direction === 1 ? 130 : -130;
+  deckEl.style.transition = 'transform 0.32s cubic-bezier(.3,.7,.3,1), opacity 0.32s ease';
+  deckEl.style.transform = `translateX(${outX}px)`;
+  deckEl.style.opacity = '0';
+  setTimeout(() => {
+    buildFn();
+    deckEl.style.transition = 'none';
+    deckEl.style.transform = `translateX(${inX}px)`;
+    deckEl.style.opacity = '0';
+    void deckEl.offsetWidth; // forzar reflow antes de animar la entrada
+    deckEl.style.transition = 'transform 0.34s cubic-bezier(.2,.8,.2,1), opacity 0.34s ease';
+    deckEl.style.transform = 'translateX(0px)';
+    deckEl.style.opacity = '1';
+  }, 320);
+}
+
 function goBack(){
   if(navStack.length <= 1) return;
-  navStack.pop();
-  renderLevel();
+  transitionLevel(() => { navStack.pop(); renderLevel(); }, -1);
 }
 
 function onIconClick(item, el){
   if(item.children && item.children.length){
-    // El recuadro se abre hacia un lado, como una puerta sobre su borde
-    // izquierdo, antes de revelar lo que hay dentro.
-    el.style.pointerEvents = 'none';
-    const base = el.style.transform || '';
-    const anim = el.animate(
-      [
-        { transform: base + ' rotateY(0deg)', opacity: el.style.opacity || 1 },
-        { transform: base + ' rotateY(-105deg)', opacity: 0.05 },
-      ],
-      { duration: 460, easing: 'cubic-bezier(.32,.68,.28,1)', fill:'forwards' }
-    );
-    anim.onfinish = () => {
+    transitionLevel(() => {
       navStack.push({ items:item.children, label:item.label });
       renderLevel();
-    };
+    }, 1);
   } else {
     el.animate(
       [{filter:'brightness(1)'},{filter:'brightness(1.5)'},{filter:'brightness(1)'}],
