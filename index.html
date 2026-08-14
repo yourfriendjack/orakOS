@@ -106,6 +106,30 @@ html,body{
   text-transform:uppercase;
   color:var(--fog);
 }
+.icon .info{
+  font-family:'JetBrains Mono',monospace;
+  font-size:0.46rem;
+  letter-spacing:0.03em;
+  color:rgba(240,232,248,0.32);
+  margin-top:-8px;
+}
+.crumb{
+  position:fixed;top:58px;left:32px;
+  font-family:'JetBrains Mono',monospace;
+  font-size:0.58rem;letter-spacing:0.04em;
+  color:var(--fog);
+  opacity:0.75;
+  display:flex;align-items:center;gap:8px;
+}
+.crumb .back{
+  color:var(--amber);
+  cursor:pointer;
+  border:1px solid var(--glass-border);
+  border-radius:4px;
+  padding:2px 8px;
+  background:var(--glass);
+}
+.crumb .back:hover{border-color:var(--amber);}
 
 .hint{
   position:fixed;top:28px;right:32px;
@@ -126,15 +150,11 @@ html,body{
 <div class="veil"></div>
 
 <div class="mark"><span class="dot"></span>orakOS &nbsp;·&nbsp; semilla</div>
-<div class="hint">usa la rueda del mouse para acercarte o alejarte</div>
+<div class="crumb" id="crumb"></div>
+<div class="hint">rueda: acércate o aléjate &nbsp;·&nbsp; clic: entra a una carpeta</div>
 
 <div class="stage" id="stage">
-  <div class="deck" id="deck">
-    <div class="icon"><div class="glyph">🕯</div><div class="label">Vela</div></div>
-    <div class="icon"><div class="glyph">◷</div><div class="label">Memoria</div></div>
-    <div class="icon"><div class="glyph">◈</div><div class="label">Sala</div></div>
-    <div class="icon"><div class="glyph">▤</div><div class="label">Archivos</div></div>
-  </div>
+  <div class="deck" id="deck"></div>
 </div>
 
 <div class="caption">
@@ -220,20 +240,82 @@ function draw(){
 }
 draw();
 
-// Los íconos están todos apilados exactamente uno detrás de otro (misma X, misma Y,
-// distinta profundidad). Girar la rueda hacia adelante empuja al que está al frente
-// hacia la pantalla hasta que desaparece, y el que estaba detrás toma su lugar.
-// Hacia atrás, ocurre lo contrario: el que se había ido regresa y el actual retrocede.
-const icons = Array.from(document.querySelectorAll('.icon'));
-const N = icons.length;
-const SPACING = 260;      // distancia entre cada ícono en la pila
-const NEAR_FADE_START = SPACING * 0.5;   // a partir de aquí empieza a desvanecerse al pasar la pantalla
-const NEAR_FADE_END   = SPACING * 0.95;  // aquí ya desapareció por completo
+// ── Datos: raíz + carpetas vacías anidadas (2 niveles de sub-carpetas de demo) ──
+function makeEmptyFolders(count, labelPrefix, depthLeft){
+  return Array.from({length:count}, (_, i) => ({
+    glyph:'▢',
+    label:`${labelPrefix} ${i+1}`,
+    info: depthLeft > 0 ? 'vacía · toca para abrir' : 'vacía · sin más contenido',
+    children: depthLeft > 0 ? makeEmptyFolders(2, 'Sub-carpeta', depthLeft-1) : null,
+  }));
+}
+const ROOT = [
+  { glyph:'🕯', label:'Vela',     info:'presencia',   children: makeEmptyFolders(3, 'Carpeta vacía', 1) },
+  { glyph:'◷', label:'Memoria',  info:'recuerdos',   children: makeEmptyFolders(3, 'Carpeta vacía', 1) },
+  { glyph:'◈', label:'Sala',     info:'espacio propio', children: makeEmptyFolders(3, 'Carpeta vacía', 1) },
+  { glyph:'▤', label:'Archivos', info:'documentos',  children: makeEmptyFolders(3, 'Carpeta vacía', 1) },
+];
 
-let depth = 0;              // 0 = orden inicial; crece al acercarte, N-1 es el límite
-const DEPTH_MIN = 0, DEPTH_MAX = N - 1;
+// ── Pila de navegación: cada nivel es un arreglo de items con su propio deck ──
+const deckEl = document.getElementById('deck');
+const crumbEl = document.getElementById('crumb');
+let navStack = [{ items: ROOT, label: 'orakOS' }];
+let icons = [];
+let depth = 0;
+const SPACING = 260;
+const NEAR_FADE_START = SPACING * 0.5;
+const NEAR_FADE_END   = SPACING * 0.95;
 
-function render(){
+function currentLevel(){ return navStack[navStack.length-1]; }
+
+function renderLevel(){
+  const items = currentLevel().items;
+  deckEl.innerHTML = '';
+  icons = items.map(item => {
+    const el = document.createElement('div');
+    el.className = 'icon';
+    el.innerHTML = `<div class="glyph">${item.glyph}</div><div class="label">${item.label}</div><div class="info">${item.info}</div>`;
+    el.dataset.hasChildren = item.children && item.children.length ? '1' : '0';
+    el.addEventListener('click', () => onIconClick(item, el));
+    deckEl.appendChild(el);
+    return el;
+  });
+  depth = 0;
+  renderDepth();
+  renderCrumb();
+}
+
+function renderCrumb(){
+  if(navStack.length <= 1){ crumbEl.innerHTML = ''; return; }
+  crumbEl.innerHTML = navStack.map((lvl,i) =>
+    i===0 ? lvl.label : ' ▸ '+lvl.label
+  ).join('') + ` <span class="back" id="backBtn">← atrás</span>`;
+  document.getElementById('backBtn').addEventListener('click', goBack);
+}
+
+function goBack(){
+  if(navStack.length <= 1) return;
+  navStack.pop();
+  renderLevel();
+}
+
+function onIconClick(item, el){
+  if(item.children && item.children.length){
+    navStack.push({ items:item.children, label:item.label });
+    renderLevel();
+  } else {
+    el.animate(
+      [{filter:'brightness(1)'},{filter:'brightness(1.5)'},{filter:'brightness(1)'}],
+      {duration:340, easing:'cubic-bezier(.2,.8,.2,1)'}
+    );
+  }
+}
+
+// Íconos apilados uno detrás de otro (misma X, misma Y, distinta profundidad).
+// Girar la rueda hacia adelante empuja al que está al frente hacia la pantalla
+// hasta que desaparece, y el que estaba detrás toma su lugar. Hacia atrás, al revés.
+function renderDepth(){
+  const N = icons.length;
   icons.forEach((icon, i) => {
     const z = SPACING * (depth - i);
     let opacity = 1;
@@ -251,21 +333,14 @@ function render(){
     icon.classList.toggle('in-focus', Math.abs(z) < SPACING*0.18);
   });
 }
-render();
 
 window.addEventListener('wheel', e => {
   e.preventDefault();
+  const N = icons.length;
   depth += e.deltaY * 0.0026;
-  depth = Math.min(DEPTH_MAX, Math.max(DEPTH_MIN, depth));
-  render();
+  depth = Math.min(N-1, Math.max(0, depth));
+  renderDepth();
 }, { passive:false });
 
-icons.forEach(icon => {
-  icon.addEventListener('click', () => {
-    icon.animate(
-      [{filter:icon.style.filter||'none'},{filter:'brightness(1.4)'},{filter:icon.style.filter||'none'}],
-      {duration:380, easing:'cubic-bezier(.2,.8,.2,1)'}
-    );
-  });
-});
+renderLevel();
 </script>
