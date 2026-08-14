@@ -435,8 +435,9 @@ let expandedOverlay = null;
 
 function expandCard(item, el){
   if(expandedOverlay) return;
+  const idx = Array.from(deckEl.children).indexOf(el);
   const rect = el.getBoundingClientRect();
-  const bar = BAR_COLORS[Array.from(deckEl.children).indexOf(el) % BAR_COLORS.length];
+  const bar = BAR_COLORS[idx % BAR_COLORS.length];
 
   const backdrop = document.createElement('div');
   backdrop.className = 'overlay-backdrop';
@@ -497,12 +498,12 @@ function expandCard(item, el){
     });
   }
 
-  expandedOverlay = { win, backdrop, originRect:rect, finalW, finalH, finalLeft, finalTop };
+  expandedOverlay = { win, backdrop, el, idx, originRect:rect, finalW, finalH, finalLeft, finalTop };
 }
 
 function collapseExpanded(mode){
   if(!expandedOverlay) return;
-  const { win, backdrop, originRect, finalW, finalH, finalLeft, finalTop } = expandedOverlay;
+  const { win, backdrop, el, idx, finalW, finalH, finalLeft, finalTop } = expandedOverlay;
   expandedOverlay = null;
   if(mode === 'none'){ win.remove(); backdrop.remove(); return; }
 
@@ -512,11 +513,16 @@ function collapseExpanded(mode){
     win.style.opacity = '0';
     win.style.transform = win.style.transform + ' scale(0.97)';
   } else {
+    // Minimizar: la tarjeta pasa al frente de la escalera (foco) antes de
+    // encogerse hacia ahí, para que sea inconfundible a dónde fue a parar.
+    depth = idx;
+    renderDepth();
+    const originRect = el.getBoundingClientRect();
     const scaleX = originRect.width/finalW, scaleY = originRect.height/finalH;
     const dx = originRect.left - finalLeft, dy = originRect.top - finalTop;
     win.style.transition = 'transform 0.32s cubic-bezier(.3,.7,.3,1), opacity 0.32s ease';
     win.style.transform = `translate(${dx}px,${dy}px) scale(${scaleX},${scaleY})`;
-    win.style.opacity = '0.1';
+    win.style.opacity = '0.5';
   }
   setTimeout(() => { win.remove(); backdrop.remove(); }, 340);
 }
@@ -548,14 +554,17 @@ function renderDepth(){
     const z  = -SPACING * rel;
     const dx = rel * STEP_X;
     const dy = -rel * STEP_Y;
+    // El desvanecido de las tarjetas lejanas era demasiado agresivo y les
+    // borraba el color por completo — se relaja para que la pila entera se
+    // vea colorida, no solo las 3-4 tarjetas más cercanas al foco.
     let opacity = 1;
     if(z > NEAR_FADE_START){
       opacity = 1 - Math.min(1, (z - NEAR_FADE_START) / (NEAR_FADE_END - NEAR_FADE_START));
-    } else if(z < -SPACING * 2.6){
-      const farT = Math.min(1, (-z - SPACING*2.6) / (SPACING*1.8));
-      opacity = 1 - farT * 0.8;
+    } else if(z < -SPACING * 6){
+      const farT = Math.min(1, (-z - SPACING*6) / (SPACING*3));
+      opacity = 1 - farT * 0.4;
     }
-    const blur = z < -SPACING*2.6 ? Math.min(2.5, (-z - SPACING*2.6)/90) : 0;
+    const blur = z < -SPACING*6 ? Math.min(1, (-z - SPACING*6)/220) : 0;
     icon.style.transform = `translate3d(${dx}px, ${dy}px, ${z}px)`;
     icon.style.opacity = Math.max(0, opacity);
     icon.style.filter = blur ? `blur(${blur}px)` : '';
