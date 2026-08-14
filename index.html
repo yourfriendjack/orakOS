@@ -495,7 +495,7 @@ let expandedOverlay = null;
 function openWindow(item, rect, bar){
   const backdrop = document.createElement('div');
   backdrop.className = 'overlay-backdrop';
-  backdrop.addEventListener('click', () => collapseExpanded('close'));
+  backdrop.addEventListener('click', () => collapseExpanded('minimize'));
   document.body.appendChild(backdrop);
 
   const win = document.createElement('div');
