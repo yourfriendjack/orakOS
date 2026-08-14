@@ -68,8 +68,8 @@ html,body{
 }
 .frame{
   position:absolute;
-  left:6%;bottom:9%;
-  width:44%;height:58%;
+  left:5%;bottom:7%;
+  width:56%;height:68%;
   border:1px solid rgba(214,178,122,0.28);
   border-radius:4px;
   background:rgba(214,178,122,0.03);
@@ -123,6 +123,36 @@ html,body{
   letter-spacing:0.03em;
   color:rgba(240,232,248,0.32);
   margin-top:-8px;
+}
+
+/* Carpetas y archivos: pequeñas ventanas de documento, no cristal oscuro. */
+.icon.doc{
+  background:linear-gradient(180deg, #f4ede0, #e8ded0);
+  border:1px solid rgba(20,14,10,0.18);
+  align-items:stretch;
+  justify-content:flex-start;
+  gap:0;
+  padding:0;
+  overflow:hidden;
+  box-shadow:0 10px 26px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.5);
+}
+.doc-bar{
+  height:20px;flex:none;
+  display:flex;align-items:center;gap:4px;
+  padding:0 8px;
+}
+.doc-bar span{width:6px;height:6px;border-radius:50%;background:rgba(0,0,0,0.28);}
+.doc-body{padding:12px 12px 10px;}
+.doc-body .doc-title{
+  font-family:'JetBrains Mono',monospace;
+  font-size:0.5rem;letter-spacing:0.02em;
+  color:rgba(40,30,20,0.6);
+  margin-bottom:9px;
+}
+.doc-body .doc-line{
+  height:4px;border-radius:2px;
+  background:rgba(40,30,20,0.14);
+  margin-bottom:7px;
 }
 .crumb{
   position:fixed;bottom:26px;left:32px;top:auto;
@@ -259,14 +289,14 @@ function makeEmptyFolders(count, labelPrefix, depthLeft){
     glyph:'▢',
     label:`${labelPrefix} ${i+1}`,
     info: depthLeft > 0 ? 'vacía · toca para abrir' : 'vacía · sin más contenido',
-    children: depthLeft > 0 ? makeEmptyFolders(2, 'Sub-carpeta', depthLeft-1) : null,
+    children: depthLeft > 0 ? makeEmptyFolders(6, 'Sub-carpeta', depthLeft-1) : null,
   }));
 }
 const ROOT = [
-  { glyph:'🕯', label:'Vela',     info:'presencia',   children: makeEmptyFolders(3, 'Carpeta vacía', 1) },
-  { glyph:'◷', label:'Memoria',  info:'recuerdos',   children: makeEmptyFolders(3, 'Carpeta vacía', 1) },
-  { glyph:'◈', label:'Sala',     info:'espacio propio', children: makeEmptyFolders(3, 'Carpeta vacía', 1) },
-  { glyph:'▤', label:'Archivos', info:'documentos',  children: makeEmptyFolders(3, 'Carpeta vacía', 1) },
+  { glyph:'🕯', label:'Vela',     info:'presencia',   children: makeEmptyFolders(11, 'Carpeta vacía', 1) },
+  { glyph:'◷', label:'Memoria',  info:'recuerdos',   children: makeEmptyFolders(11, 'Carpeta vacía', 1) },
+  { glyph:'◈', label:'Sala',     info:'espacio propio', children: makeEmptyFolders(11, 'Carpeta vacía', 1) },
+  { glyph:'▤', label:'Archivos', info:'documentos',  children: makeEmptyFolders(11, 'Carpeta vacía', 1) },
 ];
 
 // ── Pila de navegación: cada nivel es un arreglo de items con su propio deck ──
@@ -281,13 +311,28 @@ const NEAR_FADE_END   = SPACING * 0.95;
 
 function currentLevel(){ return navStack[navStack.length-1]; }
 
+const BAR_COLORS = ['#c0524a','#4a8f6b','#3f7a9e','#8a5aa8','#b8873f','#4a7a4a','#a85a7a','#5a6ba8'];
+
 function renderLevel(cascadeIn){
   const items = currentLevel().items;
+  const isRoot = navStack.length === 1;
   deckEl.innerHTML = '';
-  icons = items.map(item => {
+  icons = items.map((item, i) => {
     const el = document.createElement('div');
-    el.className = 'icon';
-    el.innerHTML = `<div class="glyph">${item.glyph}</div><div class="label">${item.label}</div><div class="info">${item.info}</div>`;
+    if(isRoot){
+      el.className = 'icon';
+      el.innerHTML = `<div class="glyph">${item.glyph}</div><div class="label">${item.label}</div><div class="info">${item.info}</div>`;
+    } else {
+      el.className = 'icon doc';
+      const bar = BAR_COLORS[i % BAR_COLORS.length];
+      const lineWidths = [92,68,80,54];
+      el.innerHTML = `
+        <div class="doc-bar" style="background:${bar}"><span></span><span></span><span></span></div>
+        <div class="doc-body">
+          <div class="doc-title">${item.label}</div>
+          ${lineWidths.map(w=>`<div class="doc-line" style="width:${w}%"></div>`).join('')}
+        </div>`;
+    }
     el.dataset.hasChildren = item.children && item.children.length ? '1' : '0';
     el.addEventListener('click', () => onIconClick(item, el));
     deckEl.appendChild(el);
@@ -361,7 +406,7 @@ function onIconClick(item, el){
 // lejanos — como en la referencia. Girar la rueda hacia adelante empuja al
 // que está al frente hacia la pantalla hasta que desaparece, y el que sigue
 // en la escalera baja a tomar su lugar. Hacia atrás, al revés.
-const STEP_X = 78, STEP_Y = 58; // paso de la escalera por cada posición de profundidad
+const STEP_X = 34, STEP_Y = 25; // paso de la escalera — chico para que quepan muchas a la vez
 
 function renderDepth(){
   icons.forEach((icon, i) => {
@@ -372,11 +417,11 @@ function renderDepth(){
     let opacity = 1;
     if(z > NEAR_FADE_START){
       opacity = 1 - Math.min(1, (z - NEAR_FADE_START) / (NEAR_FADE_END - NEAR_FADE_START));
-    } else if(z < -SPACING * 1.15){
-      const farT = Math.min(1, (-z - SPACING*1.15) / (SPACING*0.9));
-      opacity = 1 - farT * 0.75;
+    } else if(z < -SPACING * 2.6){
+      const farT = Math.min(1, (-z - SPACING*2.6) / (SPACING*1.8));
+      opacity = 1 - farT * 0.8;
     }
-    const blur = z < -SPACING*1.15 ? Math.min(3, (-z - SPACING*1.15)/60) : 0;
+    const blur = z < -SPACING*2.6 ? Math.min(2.5, (-z - SPACING*2.6)/90) : 0;
     icon.style.transform = `translate3d(${dx}px, ${dy}px, ${z}px)`;
     icon.style.opacity = Math.max(0, opacity);
     icon.style.filter = blur ? `blur(${blur}px)` : '';
