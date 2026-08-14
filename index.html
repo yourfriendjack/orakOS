@@ -66,6 +66,15 @@ html,body{
   position:absolute;inset:0;
   transform-style:preserve-3d;
 }
+.frame{
+  position:absolute;
+  left:6%;bottom:9%;
+  width:44%;height:58%;
+  border:1px solid rgba(214,178,122,0.28);
+  border-radius:4px;
+  background:rgba(214,178,122,0.03);
+  pointer-events:none;
+}
 .icon{
   position:absolute;
   left:14%;top:78%;
@@ -157,6 +166,7 @@ html,body{
 <div class="hint">rueda: acércate o aléjate &nbsp;·&nbsp; clic: entra a una carpeta</div>
 
 <div class="stage" id="stage">
+  <div class="frame" id="frame"></div>
   <div class="deck" id="deck"></div>
 </div>
 
@@ -271,7 +281,7 @@ const NEAR_FADE_END   = SPACING * 0.95;
 
 function currentLevel(){ return navStack[navStack.length-1]; }
 
-function renderLevel(){
+function renderLevel(cascadeIn){
   const items = currentLevel().items;
   deckEl.innerHTML = '';
   icons = items.map(item => {
@@ -286,6 +296,24 @@ function renderLevel(){
   depth = 0;
   renderDepth();
   renderCrumb();
+  if(cascadeIn) cascadeReveal();
+}
+
+// Cada tarjeta entra como si se deslizara desde dentro de un cajón, en cascada
+// una detrás de otra — como en la referencia, donde los documentos se van
+// asomando uno a uno hacia afuera de la carpeta.
+function cascadeReveal(){
+  icons.forEach((icon, i) => {
+    const rest = icon.style.transform;
+    const restOpacity = icon.style.opacity;
+    icon.animate(
+      [
+        { transform: rest + ' translateX(-160px)', opacity: 0 },
+        { transform: rest, opacity: restOpacity },
+      ],
+      { duration: 420, delay: i*80, easing:'cubic-bezier(.22,.75,.28,1)', fill:'backwards' }
+    );
+  });
 }
 
 function renderCrumb(){
@@ -296,39 +324,30 @@ function renderCrumb(){
   document.getElementById('backBtn').addEventListener('click', goBack);
 }
 
-// Transición tipo "ventana que se abre hacia un lado": el panel completo
-// (el deck actual) sale deslizándose hacia un lado y se desvanece; el nuevo
-// panel entra deslizándose desde el lado opuesto, como una ventana nueva
-// tomando el lugar de la anterior. direction: 1 = adelante, -1 = atrás.
-function transitionLevel(buildFn, direction){
-  const outX = direction === 1 ? -130 : 130;
-  const inX  = direction === 1 ? 130 : -130;
-  deckEl.style.transition = 'transform 0.32s cubic-bezier(.3,.7,.3,1), opacity 0.32s ease';
-  deckEl.style.transform = `translateX(${outX}px)`;
+// Al cambiar de carpeta, el contenido anterior se desvanece rápido y el
+// nuevo entra en cascada (ver cascadeReveal), como cajones asomándose uno
+// a uno desde dentro del marco.
+function transitionLevel(buildFn){
+  deckEl.style.transition = 'opacity 0.16s ease';
   deckEl.style.opacity = '0';
   setTimeout(() => {
     buildFn();
     deckEl.style.transition = 'none';
-    deckEl.style.transform = `translateX(${inX}px)`;
-    deckEl.style.opacity = '0';
-    void deckEl.offsetWidth; // forzar reflow antes de animar la entrada
-    deckEl.style.transition = 'transform 0.34s cubic-bezier(.2,.8,.2,1), opacity 0.34s ease';
-    deckEl.style.transform = 'translateX(0px)';
     deckEl.style.opacity = '1';
-  }, 320);
+  }, 160);
 }
 
 function goBack(){
   if(navStack.length <= 1) return;
-  transitionLevel(() => { navStack.pop(); renderLevel(); }, -1);
+  transitionLevel(() => { navStack.pop(); renderLevel(true); });
 }
 
 function onIconClick(item, el){
   if(item.children && item.children.length){
     transitionLevel(() => {
       navStack.push({ items:item.children, label:item.label });
-      renderLevel();
-    }, 1);
+      renderLevel(true);
+    });
   } else {
     el.animate(
       [{filter:'brightness(1)'},{filter:'brightness(1.5)'},{filter:'brightness(1)'}],
@@ -374,5 +393,5 @@ window.addEventListener('wheel', e => {
   renderDepth();
 }, { passive:false });
 
-renderLevel();
+renderLevel(true);
 </script>
