@@ -154,6 +154,45 @@ html,body{
   background:rgba(40,30,20,0.14);
   margin-bottom:7px;
 }
+
+/* Ventana expandida: la carpeta/archivo "abierto" en grande, con controles reales */
+.overlay-backdrop{
+  position:fixed;inset:0;
+  background:rgba(8,6,14,0.6);
+  backdrop-filter:blur(2px);
+  z-index:20;
+  opacity:0;
+}
+.expanded-window{
+  position:fixed;
+  z-index:21;
+  border-radius:10px;
+  overflow:hidden;
+  background:linear-gradient(180deg, #f4ede0, #e8ded0);
+  border:1px solid rgba(20,14,10,0.22);
+  box-shadow:0 30px 80px rgba(0,0,0,0.55);
+  display:flex;flex-direction:column;
+}
+.expanded-window .doc-bar{height:34px;padding:0 12px;gap:8px;}
+.expanded-window .doc-body{padding:26px 30px;flex:1;}
+.expanded-window .doc-title{font-size:0.85rem;margin-bottom:20px;color:rgba(40,30,20,0.75);}
+.expanded-window .doc-line{height:6px;margin-bottom:12px;}
+.dot{width:11px;height:11px;border-radius:50%;cursor:pointer;transition:filter 0.15s;}
+.dot:hover{filter:brightness(1.25);}
+.dot-red{background:#e0605a;}
+.dot-yellow{background:#e0b64a;}
+.dot-green{background:#5ab86a;}
+.doc-enter{
+  margin-top:14px;
+  font-family:'JetBrains Mono',monospace;font-size:0.64rem;
+  color:#8a6a2a;cursor:pointer;
+}
+.doc-enter:hover{color:#5a4110;}
+.doc-empty{
+  margin-top:14px;
+  font-family:'JetBrains Mono',monospace;font-size:0.6rem;
+  color:rgba(40,30,20,0.4);
+}
 .crumb{
   position:fixed;bottom:26px;left:32px;top:auto;
   font-family:'JetBrains Mono',monospace;
@@ -334,7 +373,10 @@ function renderLevel(cascadeIn){
         </div>`;
     }
     el.dataset.hasChildren = item.children && item.children.length ? '1' : '0';
-    el.addEventListener('click', () => onIconClick(item, el));
+    el.addEventListener('click', () => {
+      if(isRoot) onIconClick(item, el);
+      else expandCard(item, el);
+    });
     deckEl.appendChild(el);
     return el;
   });
@@ -385,6 +427,98 @@ function transitionLevel(buildFn){
 function goBack(){
   if(navStack.length <= 1) return;
   transitionLevel(() => { navStack.pop(); renderLevel(true); });
+}
+
+// ── Ventana expandida: abrir una carpeta/archivo en grande, con los tres
+// controles reales de la esquina (cerrar, minimizar, expandir) ──────────
+let expandedOverlay = null;
+
+function expandCard(item, el){
+  if(expandedOverlay) return;
+  const rect = el.getBoundingClientRect();
+  const bar = BAR_COLORS[Array.from(deckEl.children).indexOf(el) % BAR_COLORS.length];
+
+  const backdrop = document.createElement('div');
+  backdrop.className = 'overlay-backdrop';
+  backdrop.addEventListener('click', () => collapseExpanded('close'));
+  document.body.appendChild(backdrop);
+
+  const win = document.createElement('div');
+  win.className = 'expanded-window';
+  const lineWidths = [88,64,76,50,70];
+  win.innerHTML = `
+    <div class="doc-bar" style="background:${bar}">
+      <span class="dot dot-red" title="Cerrar"></span>
+      <span class="dot dot-yellow" title="Minimizar"></span>
+      <span class="dot dot-green" title="Expandir"></span>
+    </div>
+    <div class="doc-body">
+      <div class="doc-title">${item.label}</div>
+      ${lineWidths.map(w=>`<div class="doc-line" style="width:${w}%"></div>`).join('')}
+      ${item.children && item.children.length
+        ? `<div class="doc-enter">▸ toca aquí para entrar</div>`
+        : `<div class="doc-empty">${item.info}</div>`}
+    </div>`;
+  document.body.appendChild(win);
+
+  const finalW = Math.min(520, window.innerWidth*0.6);
+  const finalH = Math.min(560, window.innerHeight*0.72);
+  const finalLeft = (window.innerWidth-finalW)/2;
+  const finalTop = (window.innerHeight-finalH)/2;
+  win.style.width = finalW+'px';
+  win.style.height = finalH+'px';
+  win.style.left = finalLeft+'px';
+  win.style.top = finalTop+'px';
+
+  const scaleX = rect.width/finalW, scaleY = rect.height/finalH;
+  const dx = rect.left - finalLeft, dy = rect.top - finalTop;
+  win.style.transformOrigin = 'top left';
+  win.style.transform = `translate(${dx}px,${dy}px) scale(${scaleX},${scaleY})`;
+  win.style.opacity = '0.35';
+  void win.offsetWidth;
+  win.style.transition = 'transform 0.38s cubic-bezier(.2,.8,.2,1), opacity 0.28s ease';
+  win.style.transform = 'translate(0px,0px) scale(1,1)';
+  win.style.opacity = '1';
+  requestAnimationFrame(() => { backdrop.style.transition = 'opacity 0.3s ease'; backdrop.style.opacity = '1'; });
+
+  win.querySelector('.dot-red').addEventListener('click', e => { e.stopPropagation(); collapseExpanded('close'); });
+  win.querySelector('.dot-yellow').addEventListener('click', e => { e.stopPropagation(); collapseExpanded('minimize'); });
+  win.querySelector('.dot-green').addEventListener('click', e => { e.stopPropagation(); }); // ya está expandida
+
+  const enterEl = win.querySelector('.doc-enter');
+  if(enterEl){
+    enterEl.addEventListener('click', e => {
+      e.stopPropagation();
+      collapseExpanded('none');
+      transitionLevel(() => {
+        navStack.push({ items:item.children, label:item.label });
+        renderLevel(true);
+      });
+    });
+  }
+
+  expandedOverlay = { win, backdrop, originRect:rect, finalW, finalH, finalLeft, finalTop };
+}
+
+function collapseExpanded(mode){
+  if(!expandedOverlay) return;
+  const { win, backdrop, originRect, finalW, finalH, finalLeft, finalTop } = expandedOverlay;
+  expandedOverlay = null;
+  if(mode === 'none'){ win.remove(); backdrop.remove(); return; }
+
+  backdrop.style.opacity = '0';
+  if(mode === 'close'){
+    win.style.transition = 'opacity 0.22s ease, transform 0.22s ease';
+    win.style.opacity = '0';
+    win.style.transform = win.style.transform + ' scale(0.97)';
+  } else {
+    const scaleX = originRect.width/finalW, scaleY = originRect.height/finalH;
+    const dx = originRect.left - finalLeft, dy = originRect.top - finalTop;
+    win.style.transition = 'transform 0.32s cubic-bezier(.3,.7,.3,1), opacity 0.32s ease';
+    win.style.transform = `translate(${dx}px,${dy}px) scale(${scaleX},${scaleY})`;
+    win.style.opacity = '0.1';
+  }
+  setTimeout(() => { win.remove(); backdrop.remove(); }, 340);
 }
 
 function onIconClick(item, el){
