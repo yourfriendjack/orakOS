@@ -58,14 +58,13 @@ html,body{
 
 .stage{
   position:fixed;inset:0;
-  display:flex;align-items:center;justify-content:center;
-  gap:44px;
-  perspective:900px;
+  perspective:1100px;
 }
 .icon{
-  --depth:0;
-  position:relative;
+  position:absolute;
+  left:50%;top:50%;
   width:132px;height:158px;
+  margin:-79px 0 0 -66px;
   border-radius:16px;
   background:
     linear-gradient(160deg, rgba(255,255,255,0.07), rgba(255,255,255,0.01) 40%),
@@ -79,10 +78,9 @@ html,body{
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   gap:14px;
   cursor:pointer;
-  transform:translateZ(0) scale(1);
   filter:blur(0px) brightness(1);
   opacity:0.86;
-  transition:transform 0.55s cubic-bezier(.2,.8,.2,1), filter 0.55s ease, opacity 0.55s ease, box-shadow 0.55s ease, border-color 0.55s ease;
+  transition:transform 0.6s cubic-bezier(.2,.8,.2,1), filter 0.6s ease, opacity 0.6s ease, box-shadow 0.6s ease, border-color 0.6s ease;
 }
 .icon .glyph{
   font-size:1.7rem;
@@ -98,7 +96,6 @@ html,body{
   color:var(--fog);
 }
 .icon.near{
-  transform:translateZ(60px) scale(1.14);
   opacity:1;
   border-color:rgba(214,178,122,0.5);
   box-shadow:
@@ -107,9 +104,8 @@ html,body{
     inset 0 1px 0 rgba(255,255,255,0.14);
 }
 .icon.far{
-  transform:translateZ(-40px) scale(0.9);
   filter:blur(1.5px) brightness(0.8);
-  opacity:0.55;
+  opacity:0.5;
 }
 
 .hint{
@@ -134,14 +130,14 @@ html,body{
 <div class="hint">mueve el cursor entre los íconos</div>
 
 <div class="stage" id="stage">
-  <div class="icon" data-label="Vela"><div class="glyph">🕯</div><div class="label">Vela</div></div>
-  <div class="icon" data-label="Memoria"><div class="glyph">◷</div><div class="label">Memoria</div></div>
-  <div class="icon" data-label="Sala"><div class="glyph">◈</div><div class="label">Sala</div></div>
-  <div class="icon" data-label="Archivos"><div class="glyph">▤</div><div class="label">Archivos</div></div>
+  <div class="icon" data-dx="-46" data-dy="-34" data-z="90" data-scale="1.08"><div class="glyph">🕯</div><div class="label">Vela</div></div>
+  <div class="icon" data-dx="30" data-dy="-8" data-z="20" data-scale="0.97"><div class="glyph">◷</div><div class="label">Memoria</div></div>
+  <div class="icon" data-dx="-18" data-dy="30" data-z="-50" data-scale="0.88"><div class="glyph">◈</div><div class="label">Sala</div></div>
+  <div class="icon" data-dx="42" data-dy="52" data-z="-120" data-scale="0.78"><div class="glyph">▤</div><div class="label">Archivos</div></div>
 </div>
 
 <div class="caption">
-  Esto no es nada todavía — es solo el primer trazo de <b>orakOS</b>. Un cielo que se mueve despacio, y cuatro formas de cristal esperando a convertirse en algo. Cuando el cursor se acerca, se sale de la fila; cuando se aleja, retrocede. Así se verá, algún día, decidir hacia dónde entrar.
+  Esto no es nada todavía — es solo el primer trazo de <b>orakOS</b>. Un cielo que se mueve despacio, y cuatro formas de cristal apiladas en profundidad, esperando a convertirse en algo. La que tienes más cerca sale de la pila hacia ti; las demás se hunden un poco más atrás. Así se verá, algún día, decidir hacia dónde entrar.
 </div>
 
 <script>
@@ -223,31 +219,55 @@ function draw(){
 }
 draw();
 
-// Profundidad por proximidad del cursor
-const stage = document.getElementById('stage');
+// Pila de profundidad: cada ícono descansa en su propio punto (dx, dy, z);
+// el más cercano al cursor sale hacia el frente, los demás se hunden más en la pila.
 const icons = Array.from(document.querySelectorAll('.icon'));
+icons.forEach(icon => {
+  icon.base = {
+    dx: parseFloat(icon.dataset.dx),
+    dy: parseFloat(icon.dataset.dy),
+    z: parseFloat(icon.dataset.z),
+    scale: parseFloat(icon.dataset.scale),
+  };
+  applyTransform(icon, 'rest');
+});
+
+function applyTransform(icon, state){
+  const b = icon.base;
+  let dz = 0, sMul = 1;
+  if(state === 'near'){ dz = 90; sMul = 1.12; }
+  else if(state === 'far'){ dz = -70; sMul = 0.9; }
+  const z = b.z + dz;
+  const scale = b.scale * sMul;
+  icon.style.transform = `translate3d(${b.dx}px, ${b.dy}px, ${z}px) scale(${scale})`;
+}
+
 function updateDepth(clientX, clientY){
-  let nearest = null, nearestDist = Infinity;
+  let nearestDist = Infinity, nearestIcon = null;
   const dists = icons.map(icon => {
     const r = icon.getBoundingClientRect();
     const cx = r.left + r.width/2, cy = r.top + r.height/2;
     const d = Math.hypot(clientX-cx, clientY-cy);
-    if(d < nearestDist){ nearestDist = d; nearest = icon; }
+    if(d < nearestDist){ nearestDist = d; nearestIcon = icon; }
     return d;
   });
   icons.forEach((icon, i) => {
     icon.classList.remove('near','far');
-    if(dists[i] < 190) icon.classList.add('near');
-    else if(dists[i] > 340) icon.classList.add('far');
+    let state = 'rest';
+    if(icon === nearestIcon && dists[i] < 220){ state = 'near'; icon.classList.add('near'); }
+    else { state = 'far'; icon.classList.add('far'); }
+    applyTransform(icon, state);
   });
 }
 window.addEventListener('pointermove', e => updateDepth(e.clientX, e.clientY));
-window.addEventListener('pointerleave', () => icons.forEach(i => i.classList.remove('near','far')));
+window.addEventListener('pointerleave', () => {
+  icons.forEach(icon => { icon.classList.remove('near','far'); applyTransform(icon, 'rest'); });
+});
 
 icons.forEach(icon => {
   icon.addEventListener('click', () => {
     icon.animate(
-      [{transform:icon.style.transform||'scale(1.14)'},{transform:'scale(1.22)'},{transform:icon.classList.contains('near')?'scale(1.14)':'scale(1)'}],
+      [{transform:icon.style.transform},{transform:icon.style.transform.replace(/scale\(([^)]+)\)/, (m,s)=>`scale(${parseFloat(s)*1.08})`)},{transform:icon.style.transform}],
       {duration:420, easing:'cubic-bezier(.2,.8,.2,1)'}
     );
   });
