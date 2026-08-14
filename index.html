@@ -5,15 +5,15 @@
   src:local('Cinzel');
 }
 :root{
-  --sky-top:#0c0a14;
-  --sky-mid:#1c1430;
-  --sky-low:#2c1a2e;
+  --sky-top:#0d0906;
+  --sky-mid:#241610;
+  --sky-low:#33190f;
   --glass:rgba(30,24,42,0.45);
-  --glass-border:rgba(214,178,122,0.22);
+  --glass-border:rgba(217,117,79,0.22);
   --amber:#d9754f;
   --amber-dim:rgba(217,117,79,0.55);
-  --fog:rgba(240,232,248,0.5);
-  --ink:#f3ecf9;
+  --fog:rgba(244,228,212,0.5);
+  --ink:#f5ecdf;
 }
 *{box-sizing:border-box;}
 html,body{
@@ -25,7 +25,7 @@ html,body{
 #sky{position:fixed;inset:0;display:block;}
 .veil{
   position:fixed;inset:0;
-  background:radial-gradient(ellipse at 50% 120%, rgba(214,178,122,0.06), transparent 60%);
+  background:radial-gradient(ellipse at 50% 120%, rgba(217,117,79,0.06), transparent 60%);
   pointer-events:none;
 }
 .mark{
@@ -39,7 +39,7 @@ html,body{
 .mark .dot{
   width:6px;height:6px;border-radius:50%;
   background:var(--amber);
-  box-shadow:0 0 8px 2px rgba(214,178,122,0.6);
+  box-shadow:0 0 8px 2px rgba(217,117,79,0.6);
   animation:breathe 4s ease-in-out infinite;
 }
 @keyframes breathe{
@@ -89,17 +89,17 @@ html,body{
   transition:transform 0.09s linear, opacity 0.09s linear, filter 0.15s linear, box-shadow 0.3s ease, border-color 0.3s ease;
 }
 .icon.in-focus{
-  border-color:rgba(214,178,122,0.5);
+  border-color:rgba(217,117,79,0.5);
   box-shadow:
     0 18px 46px rgba(0,0,0,0.45),
-    0 0 40px rgba(214,178,122,0.12),
+    0 0 40px rgba(217,117,79,0.12),
     inset 0 1px 0 rgba(255,255,255,0.14);
 }
 .icon .glyph{
   font-size:1.7rem;
   color:var(--amber);
   font-family:'Cinzel',Georgia,serif;
-  text-shadow:0 0 18px rgba(214,178,122,0.35);
+  text-shadow:0 0 18px rgba(217,117,79,0.35);
 }
 .icon .label{
   font-family:'JetBrains Mono',monospace;
@@ -112,7 +112,7 @@ html,body{
   font-family:'JetBrains Mono',monospace;
   font-size:0.46rem;
   letter-spacing:0.03em;
-  color:rgba(240,232,248,0.32);
+  color:rgba(244,228,212,0.32);
   margin-top:-8px;
 }
 
@@ -272,9 +272,9 @@ function draw(){
   t += 0.016;
 
   const g = ctx.createLinearGradient(0,0,0,H);
-  g.addColorStop(0, '#0c0a14');
-  g.addColorStop(0.55, '#1c1430');
-  g.addColorStop(1, '#2c1a2e');
+  g.addColorStop(0, '#0d0906');
+  g.addColorStop(0.55, '#241610');
+  g.addColorStop(1, '#33190f');
   ctx.fillStyle = g;
   ctx.fillRect(0,0,W,H);
 
@@ -282,7 +282,7 @@ function draw(){
   for(const s of stars){
     const alpha = 0.25 + 0.35*Math.sin(t*s.speed + s.phase);
     ctx.beginPath();
-    ctx.fillStyle = `rgba(240,232,248,${Math.max(0,alpha)})`;
+    ctx.fillStyle = `rgba(244,228,212,${Math.max(0,alpha)})`;
     ctx.arc(s.x*W, s.y*H, s.r, 0, Math.PI*2);
     ctx.fill();
   }
@@ -293,8 +293,8 @@ function draw(){
     if(c.x*W > W + c.w) c.x = -c.w/W;
     const cx = c.x*W, cy = c.y*H;
     const grad = ctx.createRadialGradient(cx,cy,0,cx,cy,c.w/2);
-    grad.addColorStop(0, `rgba(214,178,122,${c.alpha})`);
-    grad.addColorStop(1, 'rgba(214,178,122,0)');
+    grad.addColorStop(0, `rgba(217,117,79,${c.alpha})`);
+    grad.addColorStop(1, 'rgba(217,117,79,0)');
     ctx.fillStyle = grad;
     ctx.beginPath();
     ctx.ellipse(cx, cy, c.w/2, c.h/2, 0, 0, Math.PI*2);
@@ -303,8 +303,8 @@ function draw(){
 
   // resplandor bajo, tipo horizonte
   const horizon = ctx.createRadialGradient(W/2, H*1.05, 0, W/2, H*1.05, W*0.75);
-  horizon.addColorStop(0, 'rgba(214,178,122,0.10)');
-  horizon.addColorStop(1, 'rgba(214,178,122,0)');
+  horizon.addColorStop(0, 'rgba(217,117,79,0.10)');
+  horizon.addColorStop(1, 'rgba(217,117,79,0)');
   ctx.fillStyle = horizon;
   ctx.fillRect(0,0,W,H);
 
