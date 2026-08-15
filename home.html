@@ -848,20 +848,26 @@ function closeSettingsPanel(){ settingsPanel.classList.remove('open'); }
 document.getElementById('settingsClose').addEventListener('click', closeSettingsPanel);
 
 // ── Arranque: carga las apps reales ya, para que favoritos/cajón estén
-// listos, y escucha instalar/desinstalar/actualizar para refrescarse sola. ──
+// listos, y escucha instalar/desinstalar/actualizar para refrescarse sola.
+// El addListener se difiere un tick: llamarlo en la misma pasada síncrona
+// en que carga la página puede pasarle al puente nativo antes de que
+// termine de armarse (visto en el teléfono real: "Cannot read properties
+// of undefined (reading 'triggerEvent')") — esperar un tick le da tiempo. ──
 loadAllApps().then(() => renderFavorites());
-const bridgeAtStart = orak();
-if(bridgeAtStart && bridgeAtStart.addListener){
-  bridgeAtStart.addListener('appsChanged', async () => {
-    await loadAllApps();
-    // limpia favoritos de apps que ya no existen (se desinstalaron)
-    const stillInstalled = new Set(ALL_APPS.map(a => a.packageName));
-    const favs = getFavorites().filter(p => stillInstalled.has(p));
-    setFavorites(favs);
-    renderFavorites();
-    if(appsPanel.classList.contains('open')) renderAppsGrid(currentAppsFilter());
-  });
-}
+setTimeout(() => {
+  const bridgeAtStart = orak();
+  if(bridgeAtStart && bridgeAtStart.addListener){
+    bridgeAtStart.addListener('appsChanged', async () => {
+      await loadAllApps();
+      // limpia favoritos de apps que ya no existen (se desinstalaron)
+      const stillInstalled = new Set(ALL_APPS.map(a => a.packageName));
+      const favs = getFavorites().filter(p => stillInstalled.has(p));
+      setFavorites(favs);
+      renderFavorites();
+      if(appsPanel.classList.contains('open')) renderAppsGrid(currentAppsFilter());
+    });
+  }
+}, 0);
 
 // ── Carrusel de la luna/clima/evento/Orak AI — cuatro páginas que se
 // deslizan horizontal, con los puntos abajo marcando en cuál estás ──────
