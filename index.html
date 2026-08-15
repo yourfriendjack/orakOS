@@ -254,7 +254,10 @@ html,body{
   font-family:'JetBrains Mono',monospace;
   text-align:right;
   opacity:0.85;
+  cursor:pointer;
+  transition:opacity 0.15s ease;
 }
+.clock:hover{opacity:1;}
 .clock .time{
   font-size:1.4rem;letter-spacing:0.03em;
   color:var(--ink);
@@ -265,6 +268,71 @@ html,body{
   text-transform:uppercase;
   color:var(--amber-dim);
   margin-top:2px;
+}
+
+/* Reloj grande + calendario, al hacer clic en la hora */
+.cal-overlay{
+  position:fixed;inset:0;
+  background:rgba(6,4,3,0.6);
+  backdrop-filter:blur(3px);
+  -webkit-backdrop-filter:blur(3px);
+  z-index:25;
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity 0.18s ease;
+}
+.cal-overlay.open{opacity:1;pointer-events:auto;}
+.cal-panel{
+  background:
+    linear-gradient(160deg, rgba(255,255,255,0.06), rgba(255,255,255,0.01) 40%),
+    var(--glass);
+  border:1px solid var(--glass-border);
+  backdrop-filter:blur(18px) saturate(140%);
+  -webkit-backdrop-filter:blur(18px) saturate(140%);
+  border-radius:16px;
+  padding:34px 38px;
+  box-shadow:0 30px 80px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.08);
+  text-align:center;
+  transform:translateY(-8px) scale(0.98);
+  transition:transform 0.18s ease;
+}
+.cal-overlay.open .cal-panel{transform:translateY(0) scale(1);}
+.cal-time-big{
+  font-family:'JetBrains Mono',monospace;
+  font-size:3.6rem;font-weight:600;
+  color:var(--ink);
+  font-variant-numeric:tabular-nums;
+  letter-spacing:0.02em;
+  line-height:1;
+}
+.cal-date-big{
+  font-family:'JetBrains Mono',monospace;
+  font-size:0.68rem;letter-spacing:0.08em;text-transform:uppercase;
+  color:var(--amber-dim);
+  margin-top:10px;margin-bottom:28px;
+}
+.cal-grid{
+  display:grid;grid-template-columns:repeat(7,1fr);
+  gap:5px;
+  min-width:280px;
+}
+.cal-weekday{
+  font-family:'JetBrains Mono',monospace;font-size:0.5rem;
+  letter-spacing:0.05em;text-transform:uppercase;
+  color:rgba(245,236,223,0.35);
+  padding-bottom:6px;
+}
+.cal-day{
+  font-family:'JetBrains Mono',monospace;font-size:0.68rem;
+  color:var(--fog);
+  padding:7px 0;border-radius:6px;
+}
+.cal-day.empty{visibility:hidden;}
+.cal-day.today{
+  background:var(--amber);
+  color:#1a0f08;
+  font-weight:700;
 }
 
 /* Dock: lo que quedó minimizado, esperando a que lo vuelvas a abrir */
@@ -388,6 +456,13 @@ html,body{
   <div class="search-results" id="searchResults"></div>
 </div>
 <div class="clock" id="clock"><div class="time" id="clockTime">--:--</div><div class="date" id="clockDate">-- ---</div></div>
+<div class="cal-overlay" id="calOverlay">
+  <div class="cal-panel">
+    <div class="cal-time-big" id="calTimeBig">--:--</div>
+    <div class="cal-date-big" id="calDateBig">-- --- ----</div>
+    <div class="cal-grid" id="calGrid"></div>
+  </div>
+</div>
 <div class="dock" id="dock"></div>
 
 <div class="stage" id="stage">
@@ -864,6 +939,47 @@ function tickClock(){
 }
 tickClock();
 setInterval(tickClock, 1000);
+
+// ── Reloj grande + calendario, al hacer clic en la hora ────────────
+const MESES_FULL = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const WEEKDAYS_SHORT = ['D','L','M','M','J','V','S'];
+const clockEl = document.getElementById('clock');
+const calOverlay = document.getElementById('calOverlay');
+const calTimeBig = document.getElementById('calTimeBig');
+const calDateBig = document.getElementById('calDateBig');
+const calGrid = document.getElementById('calGrid');
+let calTicker = null;
+
+function buildCalendarGrid(){
+  const now = new Date();
+  const year = now.getFullYear(), month = now.getMonth(), today = now.getDate();
+  const firstDow = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  let html = WEEKDAYS_SHORT.map(w => `<div class="cal-weekday">${w}</div>`).join('');
+  for(let i=0;i<firstDow;i++) html += `<div class="cal-day empty"></div>`;
+  for(let d=1; d<=daysInMonth; d++) html += `<div class="cal-day ${d===today?'today':''}">${d}</div>`;
+  calGrid.innerHTML = html;
+  calDateBig.textContent = `${DIAS[now.getDay()]}, ${today} de ${MESES_FULL[month]} de ${year}`;
+}
+function tickCalBig(){
+  const now = new Date();
+  calTimeBig.textContent = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+}
+function openCalendar(){
+  buildCalendarGrid();
+  tickCalBig();
+  clearInterval(calTicker);
+  calTicker = setInterval(tickCalBig, 1000);
+  calOverlay.classList.add('open');
+  markActive();
+}
+function closeCalendar(){
+  calOverlay.classList.remove('open');
+  clearInterval(calTicker);
+}
+clockEl.addEventListener('click', openCalendar);
+calOverlay.addEventListener('click', e => { if(e.target === calOverlay) closeCalendar(); });
+window.addEventListener('keydown', e => { if(e.key === 'Escape') closeCalendar(); });
 
 // ── Buscador rápido: salta directo a cualquier carpeta, sin importar
 // en qué nivel esté, sin tener que girar la rueda hasta encontrarla ──────
