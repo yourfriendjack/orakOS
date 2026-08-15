@@ -298,6 +298,38 @@ html,body{
 .store-btn:hover{background:#b87a2e;}
 .store-btn.installed{background:rgba(40,30,20,0.1);color:rgba(35,25,15,0.65);}
 .store-btn.installed:hover{background:rgba(40,30,20,0.18);}
+
+/* La Sala — un espacio propio, no una carpeta. Luz baja, vista que se mueve
+   despacio, madera vieja, un estante chico. Vivo pero sin ruido. */
+.expanded-window .sala-body{
+  gap:14px;
+  padding:20px 22px 18px;
+  background:
+    radial-gradient(140% 90% at 25% -10%, rgba(220,150,90,0.10), transparent 55%),
+    linear-gradient(180deg, #2a1c14, #1b120c);
+}
+.sala-window{
+  flex:1;min-height:0;
+  border-radius:6px;
+  border:10px solid rgba(58,38,24,0.92);
+  box-shadow:inset 0 0 30px rgba(0,0,0,0.55), 0 1px 0 rgba(255,220,180,0.05);
+  overflow:hidden;
+}
+.sala-canvas{width:100%;height:100%;display:block;}
+.sala-shelf{
+  flex:none;display:flex;align-items:flex-end;gap:10px;
+  padding-top:12px;
+  border-top:1px solid rgba(255,220,180,0.08);
+}
+.sala-book{
+  width:22px;border-radius:2px 5px 5px 2px;
+  writing-mode:vertical-rl;
+  color:rgba(255,240,220,0.72);
+  font-family:'JetBrains Mono',monospace;
+  font-size:0.5rem;letter-spacing:0.03em;
+  padding:8px 3px;
+  box-shadow:1px 0 0 rgba(0,0,0,0.3) inset, 2px 3px 7px rgba(0,0,0,0.4);
+}
 .crumb{
   position:fixed;bottom:26px;left:32px;top:auto;
   font-family:'JetBrains Mono',monospace;
@@ -672,7 +704,7 @@ function makeEmptyFolders(count, labelPrefix, depthLeft, parentId){
 const ROOT = [
   { id:'root-0', glyph:'🕯', label:'Vela',     info:'presencia',      children: makeEmptyFolders(11, 'Carpeta vacía', 1, 'root-0') },
   { id:'root-1', glyph:'◷', label:'Memoria',  info:'recuerdos',      children: makeEmptyFolders(11, 'Carpeta vacía', 1, 'root-1') },
-  { id:'root-2', glyph:'◈', label:'Sala',     info:'espacio propio', children: makeEmptyFolders(11, 'Carpeta vacía', 1, 'root-2') },
+  { id:'root-2', glyph:'◈', label:'Sala',     info:'espacio propio', kind:'sala', children:null },
   { id:'root-3', glyph:'▤', label:'Archivos', info:'documentos',     children: makeEmptyFolders(11, 'Carpeta vacía', 1, 'root-3') },
 ];
 
@@ -895,6 +927,16 @@ function bodyHtmlFor(item){
   if(item.kind === 'store'){
     return `<div class="doc-body app-body store-body"></div>`;
   }
+  if(item.kind === 'sala'){
+    return `<div class="doc-body app-body sala-body">
+      <div class="sala-window"><canvas class="sala-canvas"></canvas></div>
+      <div class="sala-shelf">
+        <div class="sala-book" style="height:118px;background:#6a3f30;">El Cielo que No Es Mío</div>
+        <div class="sala-book" style="height:132px;background:#33435a;">El último registro</div>
+        <div class="sala-book" style="height:104px;background:#5a4726;">OCAS · V1</div>
+      </div>
+    </div>`;
+  }
   const lineWidths = [88,64,76,50,70];
   return `<div class="doc-body">
       <div class="doc-title">${item.label}</div>
@@ -926,6 +968,7 @@ function wireAppContent(win, item){
   else if(item.kind === 'calc') wireCalc(win);
   else if(item.kind === 'paint') wireCanvas(win, item);
   else if(item.kind === 'store') renderStoreBody(win);
+  else if(item.kind === 'sala') wireSala(win);
 }
 
 // Si corremos dentro de Electron (window.orakFS existe, vía preload.js),
@@ -1050,6 +1093,54 @@ function renderStoreBody(win){
   });
 }
 
+// La Sala: un espacio, no un documento — vista lenta hacia un cielo/lluvia
+// que refleja la hora real (reusa currentSky, el mismo cielo del fondo), y
+// un estante con los libros que hemos hecho juntos. Sin ruido, sin prisa.
+function wireSala(win){
+  const canvas = win.querySelector('.sala-canvas');
+  const ctx = canvas.getContext('2d');
+  function fit(){
+    const r = canvas.getBoundingClientRect();
+    canvas.width = r.width;
+    canvas.height = r.height;
+  }
+  requestAnimationFrame(fit);
+
+  const drops = Array.from({ length: 20 }, () => ({
+    x: Math.random(), y: Math.random(),
+    len: 12 + Math.random()*18,
+    speed: 0.0003 + Math.random()*0.0003,
+  }));
+  const dim = c => c.map(v => Math.round(v*0.55));
+
+  function draw(){
+    if(!win.isConnected) return; // la ventana se cerró — el ciclo se detiene solo
+    const w = canvas.width, h = canvas.height;
+    if(w && h){
+      const g = ctx.createLinearGradient(0,0,0,h);
+      g.addColorStop(0, rgbCss(dim(currentSky.top)));
+      g.addColorStop(0.6, rgbCss(dim(currentSky.mid)));
+      g.addColorStop(1, rgbCss(dim(currentSky.low)));
+      ctx.fillStyle = g;
+      ctx.fillRect(0,0,w,h);
+
+      ctx.strokeStyle = 'rgba(230,215,195,0.09)';
+      ctx.lineWidth = 1;
+      drops.forEach(d => {
+        d.y += d.speed;
+        if(d.y > 1.08){ d.y = -0.08; d.x = Math.random(); }
+        const x = d.x*w, y = d.y*h;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x - 3, y + d.len);
+        ctx.stroke();
+      });
+    }
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+}
+
 function wireWindow(win, item, bar, finalW, finalH, finalLeft, finalTop){
   const state = { win, item, bar, finalW, finalH, finalLeft, finalTop };
   win.addEventListener('mousedown', () => bringToFront(state));
@@ -1073,6 +1164,12 @@ function wireWindow(win, item, bar, finalW, finalH, finalLeft, finalTop){
   return state;
 }
 
+// La Sala pide más espacio que una app de bolsillo — es un lugar, no un documento.
+function windowSizeFor(item){
+  if(item.kind === 'sala') return [Math.min(720, window.innerWidth*0.62), Math.min(560, window.innerHeight*0.72)];
+  return [Math.min(440, window.innerWidth*0.42), Math.min(480, window.innerHeight*0.6)];
+}
+
 function openWindow(item, rect, bar){
   const existing = findOpenWindowFor(item);
   if(existing){ bringToFront(existing); return; }
@@ -1083,8 +1180,7 @@ function openWindow(item, rect, bar){
   // Cada ventana nueva se acomoda un poco más abajo/a la derecha que la
   // anterior (cascada), para que varias abiertas no queden exactamente
   // encimadas — igual que en cualquier sistema operativo de verdad.
-  const finalW = Math.min(440, window.innerWidth*0.42);
-  const finalH = Math.min(480, window.innerHeight*0.6);
+  const [finalW, finalH] = windowSizeFor(item);
   cascadeStep = (cascadeStep + 1) % 7;
   const finalLeft = (window.innerWidth-finalW)/2 + cascadeStep*30 - 90;
   const finalTop = (window.innerHeight-finalH)/2 + cascadeStep*24 - 72;
@@ -1127,8 +1223,7 @@ function restoreWindow(item, bar, left, top, w, h, maximized){
   win.style.opacity = '1';
   if(maximized) win.dataset.maximized = '1';
 
-  const finalW = Math.min(440, window.innerWidth*0.42);
-  const finalH = Math.min(480, window.innerHeight*0.6);
+  const [finalW, finalH] = windowSizeFor(item);
   const finalLeft = (window.innerWidth-finalW)/2;
   const finalTop = (window.innerHeight-finalH)/2;
   wireWindow(win, item, bar, finalW, finalH, finalLeft, finalTop);
