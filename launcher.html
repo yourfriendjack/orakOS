@@ -1,0 +1,445 @@
+<title>orakOS — launcher</title>
+<style>
+@font-face{
+  font-family:'Cinzel';
+  src:local('Cinzel');
+}
+:root{
+  --sky-top:#0d0906;
+  --sky-mid:#241610;
+  --sky-low:#33190f;
+  --glass:rgba(30,24,42,0.45);
+  --glass-border:rgba(217,117,79,0.22);
+  --amber:#d9754f;
+  --amber-dim:rgba(217,117,79,0.55);
+  --fog:rgba(244,228,212,0.5);
+  --ink:#f5ecdf;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{
+  margin:0;padding:0;height:100%;overflow:hidden;
+  background:var(--sky-top);
+  font-family:'Crimson Pro',Georgia,serif;
+  color:var(--ink);
+  touch-action:none;
+  overscroll-behavior:none;
+}
+#sky{position:fixed;inset:0;display:block;}
+.veil{
+  position:fixed;inset:0;
+  background:radial-gradient(ellipse at 50% 120%, rgba(217,117,79,0.06), transparent 60%);
+  pointer-events:none;
+}
+.mark{
+  position:fixed;top:calc(20px + env(safe-area-inset-top));left:24px;
+  font-family:'Cinzel',Georgia,serif;
+  font-size:0.72rem;letter-spacing:0.16em;
+  text-transform:uppercase;
+  color:var(--amber-dim);
+  display:flex;align-items:center;gap:9px;
+}
+.mark .dot{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--amber);
+  box-shadow:0 0 8px 2px rgba(217,117,79,0.6);
+  animation:breathe 4s ease-in-out infinite;
+}
+@keyframes breathe{
+  0%,100%{opacity:0.55;transform:scale(0.85);}
+  50%{opacity:1;transform:scale(1.1);}
+}
+.clock{
+  position:fixed;top:calc(18px + env(safe-area-inset-top));right:22px;
+  text-align:right;
+}
+.clock .time{
+  font-family:'Cinzel',Georgia,serif;font-size:1.5rem;
+  color:var(--ink);letter-spacing:0.03em;
+}
+.clock .date{
+  font-family:'JetBrains Mono',monospace;font-size:0.56rem;
+  letter-spacing:0.05em;text-transform:uppercase;
+  color:var(--amber-dim);margin-top:2px;
+}
+.search-bar{
+  position:fixed;top:calc(70px + env(safe-area-inset-top));left:50%;
+  transform:translateX(-50%);
+  width:min(360px, 86vw);
+  display:flex;align-items:center;gap:8px;
+  padding:9px 14px;
+  background:var(--glass);
+  border:1px solid var(--glass-border);
+  backdrop-filter:blur(14px) saturate(140%);
+  -webkit-backdrop-filter:blur(14px) saturate(140%);
+  border-radius:22px;
+  z-index:14;
+}
+.search-bar .s-icon{font-size:0.8rem;opacity:0.6;}
+.search-bar input{
+  flex:1;background:none;border:none;outline:none;
+  font-family:'JetBrains Mono',monospace;font-size:0.72rem;
+  color:var(--ink);
+}
+.search-bar input::placeholder{color:rgba(245,236,223,0.35);}
+.search-dropdown{
+  position:fixed;top:calc(116px + env(safe-area-inset-top));left:50%;
+  transform:translateX(-50%) translateY(-6px);
+  width:min(360px, 86vw);
+  max-height:50vh;overflow-y:auto;
+  background:var(--glass);
+  border:1px solid var(--glass-border);
+  backdrop-filter:blur(16px) saturate(140%);
+  -webkit-backdrop-filter:blur(16px) saturate(140%);
+  border-radius:12px;
+  box-shadow:0 20px 50px rgba(0,0,0,0.45);
+  opacity:0;pointer-events:none;
+  z-index:14;
+  transition:opacity 0.15s ease, transform 0.15s ease;
+}
+.search-dropdown.open{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0);}
+.search-result{
+  display:flex;align-items:center;gap:10px;
+  padding:11px 16px;
+  cursor:pointer;
+  border-bottom:1px solid rgba(255,255,255,0.05);
+}
+.search-result:last-child{border-bottom:none;}
+.search-result:hover, .search-result.active{background:rgba(217,117,79,0.12);}
+.search-result .r-glyph{font-size:1.1rem;}
+.search-result .r-label{font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:var(--ink);}
+.search-empty{
+  padding:16px;font-family:'JetBrains Mono',monospace;
+  font-size:0.62rem;color:rgba(245,236,223,0.4);
+}
+
+.stage{
+  position:fixed;inset:0;
+  perspective:900px;
+  perspective-origin:50% 72%;
+}
+.deck{position:absolute;inset:0;transform-style:preserve-3d;}
+.icon{
+  position:absolute;
+  left:50%;top:72%;
+  width:148px;height:176px;
+  margin:-88px 0 0 -74px;
+  border-radius:18px;
+  background:
+    linear-gradient(160deg, rgba(255,255,255,0.07), rgba(255,255,255,0.01) 40%),
+    var(--glass);
+  border:1px solid var(--glass-border);
+  backdrop-filter:blur(14px) saturate(140%);
+  -webkit-backdrop-filter:blur(14px) saturate(140%);
+  box-shadow:0 10px 30px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.08);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:10px;
+  transform-origin:center 130%;
+  will-change:transform, opacity, filter;
+  transition:transform 0.09s linear, opacity 0.09s linear, filter 0.15s linear, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+.icon.in-focus{
+  border-color:rgba(217,117,79,0.5);
+  box-shadow:0 18px 46px rgba(0,0,0,0.45), 0 0 40px rgba(217,117,79,0.12), inset 0 1px 0 rgba(255,255,255,0.14);
+}
+.icon.launching{animation:pulse 0.4s ease;}
+@keyframes pulse{
+  0%{filter:brightness(1);} 50%{filter:brightness(1.6);} 100%{filter:brightness(1);}
+}
+.icon .glyph{font-size:2.3rem;}
+.icon .label{
+  font-family:'JetBrains Mono',monospace;font-size:0.66rem;
+  letter-spacing:0.04em;color:var(--fog);
+  max-width:118px;text-align:center;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+
+.hint{
+  position:fixed;bottom:calc(20px + env(safe-area-inset-bottom));left:50%;
+  transform:translateX(-50%);
+  font-family:'JetBrains Mono',monospace;font-size:0.56rem;
+  letter-spacing:0.03em;color:var(--fog);opacity:0.55;
+  text-align:center;
+}
+.pageline{
+  position:fixed;bottom:calc(46px + env(safe-area-inset-bottom));left:50%;
+  transform:translateX(-50%);
+  font-family:'JetBrains Mono',monospace;font-size:0.56rem;
+  color:var(--amber-dim);letter-spacing:0.05em;
+}
+
+@media (prefers-reduced-motion:reduce){
+  .mark .dot{animation:none;}
+  .icon{transition:none;}
+}
+</style>
+
+<canvas id="sky"></canvas>
+<div class="veil"></div>
+
+<div class="mark"><span class="dot"></span>orakOS</div>
+<div class="clock" id="clock"><div class="time" id="clockTime">--:--</div><div class="date" id="clockDate">-- ---</div></div>
+
+<div class="search-bar" id="searchBar">
+  <span class="s-icon">🔍</span>
+  <input type="text" id="searchInput" placeholder="Buscar una app…" autocomplete="off" spellcheck="false">
+</div>
+<div class="search-dropdown" id="searchDropdown">
+  <div class="search-results" id="searchResults"></div>
+</div>
+
+<div class="stage" id="stage">
+  <div class="deck" id="deck"></div>
+</div>
+
+<div class="pageline" id="pageline"></div>
+<div class="hint">desliza: recorre tus apps &nbsp;·&nbsp; toca: abre</div>
+
+<script>
+// ── Cielo de fondo — igual que en orakOS de escritorio, mismo lenguaje visual.
+const cv = document.getElementById('sky');
+const ctx = cv.getContext('2d');
+let W, H, DPR;
+function resize(){
+  DPR = Math.min(window.devicePixelRatio||1, 2);
+  W = window.innerWidth; H = window.innerHeight;
+  cv.width = W*DPR; cv.height = H*DPR;
+  cv.style.width = W+'px'; cv.style.height = H+'px';
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+resize();
+window.addEventListener('resize', resize);
+
+const STAR_COUNT = 60;
+const stars = Array.from({length:STAR_COUNT}, () => ({
+  x: Math.random(), y: Math.random()*0.7,
+  r: Math.random()*1.3 + 0.3,
+  phase: Math.random()*Math.PI*2,
+  speed: 0.15 + Math.random()*0.25,
+}));
+
+const SKY_KEYFRAMES = [
+  { h:0,  top:[13,9,6],  mid:[36,22,16], low:[51,25,15] },
+  { h:6,  top:[10,8,11], mid:[28,19,27], low:[38,19,27] },
+  { h:12, top:[16,10,7], mid:[46,27,17], low:[64,30,16] },
+  { h:18, top:[19,8,5],  mid:[56,20,10], low:[77,22,8]  },
+  { h:24, top:[13,9,6],  mid:[36,22,16], low:[51,25,15] },
+];
+function lerpRGB(a,b,f){ return [0,1,2].map(i => Math.round(a[i]+(b[i]-a[i])*f)); }
+function rgbCss(c){ return `rgb(${c[0]},${c[1]},${c[2]})`; }
+function currentSkyPalette(){
+  const now = new Date();
+  const h = now.getHours() + now.getMinutes()/60;
+  let a = SKY_KEYFRAMES[0], b = SKY_KEYFRAMES[1];
+  for(let i=0;i<SKY_KEYFRAMES.length-1;i++){
+    if(h >= SKY_KEYFRAMES[i].h && h <= SKY_KEYFRAMES[i+1].h){ a = SKY_KEYFRAMES[i]; b = SKY_KEYFRAMES[i+1]; break; }
+  }
+  const f = (h - a.h) / (b.h - a.h);
+  return { top:lerpRGB(a.top,b.top,f), mid:lerpRGB(a.mid,b.mid,f), low:lerpRGB(a.low,b.low,f) };
+}
+let currentSky = currentSkyPalette();
+setInterval(() => { currentSky = currentSkyPalette(); }, 60000);
+
+let t = 0;
+function draw(){
+  t += 0.016;
+  const g = ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0, rgbCss(currentSky.top));
+  g.addColorStop(0.55, rgbCss(currentSky.mid));
+  g.addColorStop(1, rgbCss(currentSky.low));
+  ctx.fillStyle = g;
+  ctx.fillRect(0,0,W,H);
+  for(const s of stars){
+    const alpha = 0.25 + 0.35*Math.sin(t*s.speed + s.phase);
+    ctx.beginPath();
+    ctx.fillStyle = `rgba(244,228,212,${Math.max(0,alpha)})`;
+    ctx.arc(s.x*W, s.y*H, s.r, 0, Math.PI*2);
+    ctx.fill();
+  }
+  const horizon = ctx.createRadialGradient(W/2, H*1.05, 0, W/2, H*1.05, W*0.8);
+  horizon.addColorStop(0, 'rgba(217,117,79,0.10)');
+  horizon.addColorStop(1, 'rgba(217,117,79,0)');
+  ctx.fillStyle = horizon;
+  ctx.fillRect(0,0,W,H);
+  requestAnimationFrame(draw);
+}
+draw();
+
+const clockTimeEl = document.getElementById('clockTime');
+const clockDateEl = document.getElementById('clockDate');
+const DIAS = ['dom','lun','mar','mié','jue','vie','sáb'];
+const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+function tickClock(){
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2,'0');
+  const mm = String(now.getMinutes()).padStart(2,'0');
+  clockTimeEl.textContent = `${hh}:${mm}`;
+  clockDateEl.textContent = `${DIAS[now.getDay()]} · ${now.getDate()} ${MESES[now.getMonth()]}`;
+}
+tickClock();
+setInterval(tickClock, 15000);
+
+// ── Las apps: si esto corre dentro del wrapper nativo de Android
+// (window.OrakLauncher, expuesto por el puente Java↔JS), pide la lista real
+// de apps instaladas del teléfono. Si no (navegador normal, para probar el
+// gesto/la sensación antes de compilar nada), usa una lista de muestra.
+const MOCK_APPS = [
+  { id:'whatsapp', glyph:'💬', label:'WhatsApp',  pkg:'com.whatsapp' },
+  { id:'camara',   glyph:'📷', label:'Cámara',    pkg:'com.sec.android.app.camera' },
+  { id:'chrome',   glyph:'🌐', label:'Chrome',    pkg:'com.android.chrome' },
+  { id:'fotos',    glyph:'🖼️', label:'Galería',   pkg:'com.sec.android.gallery3d' },
+  { id:'ajustes',  glyph:'⚙️', label:'Ajustes',   pkg:'com.android.settings' },
+  { id:'telefono', glyph:'📞', label:'Teléfono',  pkg:'com.samsung.android.dialer' },
+  { id:'mensajes', glyph:'✉️', label:'Mensajes',  pkg:'com.samsung.android.messaging' },
+  { id:'correo',   glyph:'📧', label:'Correo',    pkg:'com.google.android.gm' },
+  { id:'youtube',  glyph:'▶️', label:'YouTube',   pkg:'com.google.android.youtube' },
+  { id:'musica',   glyph:'🎵', label:'Música',    pkg:'com.sec.android.app.music' },
+  { id:'calc',     glyph:'🧮', label:'Calculadora', pkg:'com.sec.android.app.popupcalculator' },
+  { id:'reloj',    glyph:'⏰', label:'Reloj',     pkg:'com.sec.android.app.clockpackage' },
+  { id:'playstore',glyph:'🛍️', label:'Play Store', pkg:'com.android.vending' },
+  { id:'mapas',    glyph:'🗺️', label:'Mapas',     pkg:'com.google.android.apps.maps' },
+];
+
+let APPS = [];
+function loadApps(){
+  if(window.OrakLauncher && window.OrakLauncher.listApps){
+    try {
+      const real = JSON.parse(window.OrakLauncher.listApps());
+      APPS = real.length ? real : MOCK_APPS;
+    } catch(e){ APPS = MOCK_APPS; }
+  } else {
+    APPS = MOCK_APPS;
+  }
+}
+loadApps();
+
+function launchApp(app, el){
+  if(el){
+    el.classList.add('launching');
+    setTimeout(() => el.classList.remove('launching'), 400);
+  }
+  if(window.OrakLauncher && window.OrakLauncher.launchApp){
+    window.OrakLauncher.launchApp(app.pkg);
+  } else {
+    console.log('[orakOS launcher] abriría:', app.label, app.pkg);
+  }
+}
+
+// ── Escalera de profundidad — mismo lenguaje visual que el escritorio, en
+// una sola fila plana (no hay carpetas que anidar, son tus apps reales) ──
+const deckEl = document.getElementById('deck');
+const SPACING = 240;
+const STEP_X = 0, STEP_Y = 22;
+const NEAR_FADE_START = -SPACING*0.55, NEAR_FADE_END = SPACING*0.15;
+let icons = [];
+let depth = 0;
+
+function renderDeck(){
+  deckEl.innerHTML = '';
+  icons = APPS.map(app => {
+    const el = document.createElement('div');
+    el.className = 'icon';
+    el.innerHTML = `<div class="glyph">${app.glyph}</div><div class="label">${app.label}</div>`;
+    el.addEventListener('click', () => {
+      const rel = icons.indexOf(el) - depth;
+      if(Math.abs(rel) < 0.5) launchApp(app, el);
+    });
+    deckEl.appendChild(el);
+    return el;
+  });
+  renderDepth();
+}
+
+function renderDepth(){
+  icons.forEach((icon, i) => {
+    const rel = i - depth;
+    const z  = -SPACING * rel;
+    const dy = -rel * STEP_Y;
+    let opacity = 1;
+    if(z > NEAR_FADE_START){
+      opacity = 1 - Math.min(1, (z - NEAR_FADE_START) / (NEAR_FADE_END - NEAR_FADE_START));
+    } else if(z < -SPACING * 6){
+      const farT = Math.min(1, (-z - SPACING*6) / (SPACING*3));
+      opacity = 1 - farT * 0.4;
+    }
+    const blur = z < -SPACING*6 ? Math.min(1, (-z - SPACING*6)/220) : 0;
+    icon.style.transform = `translate3d(0px, ${dy}px, ${z}px)`;
+    icon.style.opacity = Math.max(0, opacity);
+    icon.style.filter = blur ? `blur(${blur}px)` : '';
+    icon.style.pointerEvents = opacity < 0.15 ? 'none' : 'auto';
+    icon.classList.toggle('in-focus', Math.abs(z) < SPACING*0.18);
+  });
+  const pageline = document.getElementById('pageline');
+  const i = Math.round(Math.min(icons.length-1, Math.max(0, depth)));
+  pageline.textContent = icons.length ? `${i+1} / ${icons.length}` : '';
+}
+
+function setDepth(v){
+  depth = Math.min(icons.length-1, Math.max(0, v));
+  renderDepth();
+}
+
+// Rueda (para probar en navegador de escritorio) — mismo gesto que orakOS.
+window.addEventListener('wheel', e => {
+  e.preventDefault();
+  setDepth(depth + e.deltaY * 0.0026);
+}, { passive:false });
+
+// Deslizar con el dedo — un swipe hacia arriba avanza, hacia abajo retrocede.
+// El umbral evita que un simple toque (para abrir) se confunda con un gesto.
+const stageEl = document.getElementById('stage');
+let touchStartY = 0, touchStartDepth = 0, touchMoved = false;
+stageEl.addEventListener('touchstart', e => {
+  if(e.touches.length !== 1) return;
+  touchStartY = e.touches[0].clientY;
+  touchStartDepth = depth;
+  touchMoved = false;
+}, { passive:true });
+stageEl.addEventListener('touchmove', e => {
+  if(e.touches.length !== 1) return;
+  const dy = e.touches[0].clientY - touchStartY;
+  if(Math.abs(dy) > 6) touchMoved = true;
+  setDepth(touchStartDepth - dy * 0.012);
+  e.preventDefault();
+}, { passive:false });
+stageEl.addEventListener('touchend', () => {
+  if(!touchMoved){
+    // fue un toque, no un gesto — abre lo que está enfocado
+    const i = Math.round(depth);
+    if(icons[i]) launchApp(APPS[i], icons[i]);
+  }
+});
+
+renderDeck();
+
+// ── Buscar por nombre — útil cuando ya tienes muchas apps instaladas ──
+const searchInput = document.getElementById('searchInput');
+const searchDropdown = document.getElementById('searchDropdown');
+const searchResultsEl = document.getElementById('searchResults');
+let searchMatches = [];
+function openSearch(){ searchDropdown.classList.add('open'); renderSearchResults(searchInput.value); }
+function closeSearch(){ searchDropdown.classList.remove('open'); }
+function renderSearchResults(q){
+  const query = q.trim().toLowerCase();
+  searchMatches = APPS.filter(a => a.label.toLowerCase().includes(query));
+  if(searchMatches.length === 0){
+    searchResultsEl.innerHTML = `<div class="search-empty">sin resultados</div>`;
+    return;
+  }
+  searchResultsEl.innerHTML = searchMatches.map(a => `
+    <div class="search-result" data-id="${a.id}">
+      <span class="r-glyph">${a.glyph}</span><span class="r-label">${a.label}</span>
+    </div>`).join('');
+  searchResultsEl.querySelectorAll('.search-result').forEach(el => {
+    el.addEventListener('click', () => {
+      const app = APPS.find(a => a.id === el.dataset.id);
+      const idx = APPS.indexOf(app);
+      setDepth(idx);
+      closeSearch();
+      searchInput.blur();
+    });
+  });
+}
+searchInput.addEventListener('focus', openSearch);
+searchInput.addEventListener('input', () => renderSearchResults(searchInput.value));
+searchInput.addEventListener('blur', () => setTimeout(closeSearch, 150));
+</script>
