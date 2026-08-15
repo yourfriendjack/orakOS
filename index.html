@@ -309,6 +309,7 @@ html,body{
     linear-gradient(180deg, #2a1c14, #1b120c);
 }
 .sala-window{
+  position:relative;
   flex:1;min-height:0;
   border-radius:6px;
   border:10px solid rgba(58,38,24,0.92);
@@ -316,6 +317,67 @@ html,body{
   overflow:hidden;
 }
 .sala-canvas{width:100%;height:100%;display:block;}
+.sala-shop-toggle{
+  position:absolute;top:10px;right:10px;z-index:4;
+  width:30px;height:30px;border-radius:50%;border:none;cursor:pointer;
+  background:rgba(20,14,9,0.55);
+  font-size:0.85rem;line-height:1;
+  display:flex;align-items:center;justify-content:center;
+  backdrop-filter:blur(3px);
+  transition:background 0.15s ease;
+}
+.sala-shop-toggle:hover{background:rgba(20,14,9,0.75);}
+.sala-shop-panel{
+  position:absolute;inset:0;z-index:3;
+  padding:16px 18px;
+  background:rgba(16,11,7,0.94);
+  backdrop-filter:blur(4px);
+  overflow-y:auto;
+  transform:translateY(-8px);
+  opacity:0;pointer-events:none;
+  transition:opacity 0.18s ease, transform 0.18s ease;
+}
+.sala-shop-panel.open{opacity:1;pointer-events:auto;transform:translateY(0);}
+.sala-shop-title{
+  font-family:'JetBrains Mono',monospace;font-size:0.66rem;letter-spacing:0.04em;
+  color:rgba(255,235,215,0.55);margin-bottom:10px;
+}
+.sala-shop-row{
+  display:flex;align-items:center;gap:12px;
+  padding:9px 2px;
+  border-bottom:1px solid rgba(255,220,180,0.08);
+}
+.sala-shop-row:last-child{border-bottom:none;}
+.sala-shop-glyph{font-size:1.15rem;flex:none;}
+.sala-shop-info{flex:1;min-width:0;}
+.sala-shop-name{
+  font-family:'JetBrains Mono',monospace;font-size:0.68rem;
+  color:rgba(255,240,222,0.85);margin-bottom:2px;
+}
+.sala-shop-desc{
+  font-family:'JetBrains Mono',monospace;font-size:0.54rem;
+  color:rgba(255,235,215,0.4);
+}
+.sala-shop-btn{
+  flex:none;border:none;border-radius:5px;cursor:pointer;
+  padding:6px 12px;
+  background:#c98a3a;color:#fff8ec;
+  font-family:'JetBrains Mono',monospace;font-size:0.56rem;letter-spacing:0.03em;
+  transition:background 0.12s ease;
+}
+.sala-shop-btn:hover{background:#b87a2e;}
+.sala-shop-btn.owned{background:rgba(255,235,215,0.1);color:rgba(255,240,222,0.65);}
+.sala-shop-btn.owned:hover{background:rgba(255,235,215,0.18);}
+.sala-floor{
+  flex:none;min-height:38px;
+  display:flex;align-items:center;gap:14px;
+  padding:2px 4px;
+}
+.sala-floor-empty{
+  font-family:'JetBrains Mono',monospace;font-size:0.56rem;
+  color:rgba(255,235,215,0.28);
+}
+.sala-item{font-size:1.5rem;filter:drop-shadow(0 3px 4px rgba(0,0,0,0.4));}
 .sala-shelf{
   flex:none;display:flex;align-items:flex-end;gap:10px;
   padding-top:12px;
@@ -718,6 +780,29 @@ const APP_CATALOG = [
 let installedAppIds = [];
 function isInstalled(id){ return installedAppIds.includes(id); }
 
+// ── Muebles de la Sala: no se instalan como apps, se compran y se quedan ahí
+// dentro — el espacio se va construyendo con el tiempo, no se configura una
+// sola vez ──────────────────────────────────────────────────────────────
+const SALA_CATALOG = [
+  { id:'sala-silla',  glyph:'🪑', label:'Silla vieja',   info:'de madera, ya gastada' },
+  { id:'sala-lampara',glyph:'🪔', label:'Lámpara',       info:'luz baja, cálida' },
+  { id:'sala-planta', glyph:'🪴', label:'Planta',        info:'algo que crece despacio' },
+  { id:'sala-vino',   glyph:'🍷', label:'Copa de vino',  info:'para cuando alguien acompaña' },
+  { id:'sala-radio',  glyph:'📻', label:'Radio',         info:'sonido de fondo, casi nada' },
+  { id:'sala-manta',  glyph:'🧣', label:'Manta gruesa',  info:'tela, no plástico' },
+];
+let ownedFurnitureIds = [];
+function isOwned(id){ return ownedFurnitureIds.includes(id); }
+function buyFurniture(id){
+  if(isOwned(id)) return;
+  ownedFurnitureIds.push(id);
+  scheduleSave();
+}
+function sellFurniture(id){
+  ownedFurnitureIds = ownedFurnitureIds.filter(x => x !== id);
+  scheduleSave();
+}
+
 // Índice de búsqueda — mutable, porque ROOT cambia cada vez que se instala
 // o desinstala un programa (a diferencia de las carpetas, que son fijas).
 const SEARCH_INDEX = [];
@@ -929,7 +1014,12 @@ function bodyHtmlFor(item){
   }
   if(item.kind === 'sala'){
     return `<div class="doc-body app-body sala-body">
-      <div class="sala-window"><canvas class="sala-canvas"></canvas></div>
+      <div class="sala-window">
+        <canvas class="sala-canvas"></canvas>
+        <button class="sala-shop-toggle" title="remodelar">🛋️</button>
+        <div class="sala-shop-panel"></div>
+      </div>
+      <div class="sala-floor"></div>
       <div class="sala-shelf">
         <div class="sala-book" style="height:118px;background:#6a3f30;">El Cielo que No Es Mío</div>
         <div class="sala-book" style="height:132px;background:#33435a;">El último registro</div>
@@ -1093,10 +1183,53 @@ function renderStoreBody(win){
   });
 }
 
+// Los muebles que ya se compraron, sentados en el piso de la Sala.
+function renderSalaFloor(win){
+  const floor = win.querySelector('.sala-floor');
+  if(ownedFurnitureIds.length === 0){
+    floor.innerHTML = `<div class="sala-floor-empty">todavía no hay muebles aquí</div>`;
+    return;
+  }
+  floor.innerHTML = ownedFurnitureIds.map(id => {
+    const item = SALA_CATALOG.find(f => f.id === id);
+    return item ? `<span class="sala-item" title="${item.label}">${item.glyph}</span>` : '';
+  }).join('');
+}
+
+// El panel de "remodelar" — comprar/quitar muebles, se queda abierto sobre
+// la vista hasta que se vuelve a tocar el botón.
+function renderSalaShop(win){
+  const panel = win.querySelector('.sala-shop-panel');
+  panel.innerHTML = `<div class="sala-shop-title">remodelar la sala</div>` + SALA_CATALOG.map(f => `
+    <div class="sala-shop-row">
+      <span class="sala-shop-glyph">${f.glyph}</span>
+      <div class="sala-shop-info"><div class="sala-shop-name">${f.label}</div><div class="sala-shop-desc">${f.info}</div></div>
+      <button class="sala-shop-btn ${isOwned(f.id)?'owned':''}" data-id="${f.id}">${isOwned(f.id)?'quitar':'poner'}</button>
+    </div>`).join('');
+  panel.querySelectorAll('.sala-shop-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const id = btn.dataset.id;
+      if(isOwned(id)) sellFurniture(id); else buyFurniture(id);
+      renderSalaShop(win);
+      renderSalaFloor(win);
+    });
+  });
+}
+
 // La Sala: un espacio, no un documento — vista lenta hacia un cielo/lluvia
 // que refleja la hora real (reusa currentSky, el mismo cielo del fondo), y
 // un estante con los libros que hemos hecho juntos. Sin ruido, sin prisa.
 function wireSala(win){
+  renderSalaFloor(win);
+  renderSalaShop(win);
+  const toggle = win.querySelector('.sala-shop-toggle');
+  const panel = win.querySelector('.sala-shop-panel');
+  toggle.addEventListener('click', e => {
+    e.stopPropagation();
+    panel.classList.toggle('open');
+  });
+
   const canvas = win.querySelector('.sala-canvas');
   const ctx = canvas.getContext('2d');
   function fit(){
@@ -1568,7 +1701,7 @@ function saveState(){
       maximized: w.win.dataset.maximized === '1',
     }));
     const dock = minimizedDock.map(e => e.item.id);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ navPath, depth, windows, dock, memoryCount, installed: installedAppIds }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ navPath, depth, windows, dock, memoryCount, installed: installedAppIds, furniture: ownedFurnitureIds }));
   } catch(e) {}
 }
 function loadState(){
@@ -1593,6 +1726,7 @@ window.addEventListener('beforeunload', saveState);
   const saved = loadState();
   if(!saved) return;
   installedAppIds = saved.installed || [];
+  ownedFurnitureIds = saved.furniture || [];
   refreshRootApps();
   applyNavPath(saved.navPath || []);
   renderLevel(false);
