@@ -11,6 +11,18 @@
   --card-border:rgba(255,255,255,0.09);
   --ink:#f3f1ec;
   --fog:rgba(243,241,236,0.5);
+  --icon-size:52px;
+  --cols:4;
+}
+:root[data-theme="light"]{
+  --bg-top:#f4f1ea;
+  --bg-low:#e8e2d5;
+  --gold:#a97d42;
+  --gold-dim:rgba(169,125,66,0.65);
+  --card:rgba(20,15,10,0.045);
+  --card-border:rgba(20,15,10,0.12);
+  --ink:#241c14;
+  --fog:rgba(36,28,20,0.55);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html,body{
@@ -28,6 +40,12 @@ html,body{
     url('wallpaper.jpg') center center / cover no-repeat,
     linear-gradient(180deg, var(--bg-top), var(--bg-low));
 }
+:root[data-theme="light"] .bg{
+  background:
+    linear-gradient(180deg, rgba(244,241,234,0.55), rgba(232,226,213,0.78) 70%, rgba(232,226,213,0.92)),
+    url('wallpaper.jpg') center center / cover no-repeat,
+    linear-gradient(180deg, var(--bg-top), var(--bg-low));
+}
 .wrap{
   position:fixed;inset:0;
   padding:calc(22px + env(safe-area-inset-top)) 22px calc(14px + env(safe-area-inset-bottom));
@@ -37,6 +55,7 @@ html,body{
 .icon-svg{width:18px;height:18px;display:block;}
 
 .hdr{display:flex;justify-content:space-between;align-items:flex-start;}
+.hide-greet .greet{visibility:hidden;}
 .greet .h1{font-size:1.5rem;color:var(--ink);}
 .greet .h2{
   font-family:'JetBrains Mono',monospace;font-size:0.68rem;
@@ -45,7 +64,8 @@ html,body{
 .greet .underline{width:28px;height:1px;background:rgba(255,255,255,0.22);margin-top:14px;}
 
 /* El logo de Orak: el mismo anillo con un punto que ya usamos para la luna,
-   pero girando despacio y sin parar — toca para abrir ORAK Universe. */
+   pero girando despacio y sin parar — toca para abrir ORAK Universe,
+   mantén presionado para los ajustes del launcher. */
 .ring-btn{
   flex:none;width:38px;height:38px;border-radius:50%;
   border:1px solid rgba(202,168,118,0.4);
@@ -87,6 +107,7 @@ html,body{
   display:flex;height:100%;
   transition:transform 0.32s cubic-bezier(.2,.8,.2,1);
 }
+.no-anim .carousel-track{transition:none;}
 .cpage{
   flex:0 0 100%;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -105,6 +126,7 @@ html,body{
   animation:orbit 40s linear infinite;
 }
 @keyframes orbit{ to{ transform:rotate(360deg); } }
+.no-anim .orbit-dot, .no-anim .ring-btn::after{animation:none;}
 #moonCanvas{position:absolute;inset:14%;border-radius:50%;}
 
 .wpage .wicon{color:var(--gold);}
@@ -160,6 +182,7 @@ html,body{
 .dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.18);transition:background 0.2s ease, transform 0.2s ease;}
 .dot.active{background:var(--gold);transform:scale(1.3);}
 
+.hide-datebar .datebar{visibility:hidden;}
 .datebar{
   display:flex;align-items:center;justify-content:center;gap:18px;
   flex:none;
@@ -177,21 +200,30 @@ html,body{
   font-family:'JetBrains Mono',monospace;font-size:0.56rem;letter-spacing:0.08em;
   color:var(--fog);text-align:center;margin-bottom:9px;
 }
-.quick-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.quick-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;min-height:calc(var(--icon-size) + 24px);}
 .qbtn{
   display:flex;flex-direction:column;align-items:center;gap:7px;
   background:none;border:none;color:var(--ink);
 }
 .qbtn .box{
-  width:52px;height:52px;border-radius:15px;
+  width:var(--icon-size);height:var(--icon-size);border-radius:15px;
   background:var(--card);
   border:1px solid var(--card-border);
   display:flex;align-items:center;justify-content:center;
   color:var(--gold);
+  overflow:hidden;
   transition:transform 0.12s ease, background 0.12s ease;
 }
+.qbtn .box img{width:100%;height:100%;object-fit:cover;}
 .qbtn:active .box{transform:scale(0.93);background:rgba(255,255,255,0.09);}
+.qbtn.dragging{opacity:0.35;}
+.hide-labels .qlabel, .hide-labels .alabel{display:none;}
 .qbtn .qlabel{font-family:'JetBrains Mono',monospace;font-size:0.53rem;color:var(--fog);}
+.favorites-empty{
+  grid-column:1/-1;
+  font-family:'JetBrains Mono',monospace;font-size:0.55rem;color:var(--fog);
+  text-align:center;padding:10px 6px;line-height:1.6;
+}
 
 .chevron-btn{
   flex:none;align-self:center;
@@ -216,29 +248,39 @@ html,body{
 }
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
-/* Panel de todas tus apps reales — sube desde abajo, no navega a otra
-   página, para que se sienta como abrir un cajón, no como cambiar de app. */
+/* Paneles que suben desde abajo — el cajón de apps y los ajustes comparten
+   el mismo tratamiento visual, para que se sientan del mismo sistema. */
 .apps-panel{
   position:fixed;inset:0;z-index:30;
-  background:rgba(8,10,13,0.88);
+  background:rgba(8,10,13,0.9);
   backdrop-filter:blur(14px);
   -webkit-backdrop-filter:blur(14px);
   padding:calc(20px + env(safe-area-inset-top)) 20px calc(20px + env(safe-area-inset-bottom));
-  display:flex;flex-direction:column;gap:16px;
+  display:flex;flex-direction:column;gap:14px;
   transform:translateY(100%);
   transition:transform 0.3s cubic-bezier(.2,.8,.2,1);
 }
+:root[data-theme="light"] .apps-panel{background:rgba(232,226,213,0.94);}
+.no-anim .apps-panel{transition:none;}
 .apps-panel.open{transform:translateY(0);}
-.apps-hdr{display:flex;align-items:center;justify-content:space-between;}
+.apps-hdr{display:flex;align-items:center;justify-content:space-between;flex:none;}
 .apps-title{font-size:1.1rem;color:var(--ink);}
 .apps-close{
   width:32px;height:32px;border-radius:50%;
   border:1px solid var(--card-border);background:none;color:var(--fog);
   display:flex;align-items:center;justify-content:center;
 }
+.apps-search{flex:none;}
+.apps-search input{
+  width:100%;padding:10px 14px;
+  background:var(--card);border:1px solid var(--card-border);border-radius:20px;
+  font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--ink);
+  outline:none;
+}
+.apps-search input::placeholder{color:rgba(243,241,236,0.35);}
 .apps-grid{
   flex:1;overflow-y:auto;
-  display:grid;grid-template-columns:repeat(4,1fr);gap:16px 8px;
+  display:grid;grid-template-columns:repeat(var(--cols),1fr);gap:16px 8px;
   align-content:start;
   padding-bottom:20px;
 }
@@ -246,13 +288,18 @@ html,body{
   display:flex;flex-direction:column;align-items:center;gap:6px;
   background:none;border:none;color:var(--ink);
 }
+.app-cell.dragging{opacity:0.4;}
 .app-cell .aicon{
-  width:52px;height:52px;border-radius:14px;
+  width:var(--icon-size);height:var(--icon-size);border-radius:14px;
   background:var(--card);border:1px solid var(--card-border);
   display:flex;align-items:center;justify-content:center;
-  overflow:hidden;
+  overflow:hidden;position:relative;
 }
 .app-cell .aicon img{width:100%;height:100%;object-fit:cover;}
+.app-cell .aicon .fav-dot{
+  position:absolute;top:3px;right:3px;width:6px;height:6px;border-radius:50%;
+  background:var(--gold);box-shadow:0 0 4px 1px rgba(202,168,118,0.7);
+}
 .app-cell .alabel{
   font-family:'JetBrains Mono',monospace;font-size:0.5rem;color:var(--fog);
   text-align:center;max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
@@ -261,6 +308,52 @@ html,body{
   font-family:'JetBrains Mono',monospace;font-size:0.62rem;color:var(--fog);
   text-align:center;margin-top:40px;
 }
+
+.settings-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:2px;}
+.setting-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:13px 2px;border-bottom:1px solid rgba(255,255,255,0.06);
+  font-family:'JetBrains Mono',monospace;font-size:0.64rem;color:var(--ink);
+}
+.setting-row input[type="checkbox"]{
+  -webkit-appearance:none;appearance:none;
+  width:36px;height:20px;border-radius:12px;position:relative;
+  background:rgba(255,255,255,0.14);outline:none;cursor:pointer;
+  transition:background 0.15s ease;flex:none;
+}
+.setting-row input[type="checkbox"]::before{
+  content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;
+  background:var(--fog);transition:transform 0.15s ease, background 0.15s ease;
+}
+.setting-row input[type="checkbox"]:checked{background:rgba(202,168,118,0.45);}
+.setting-row input[type="checkbox"]:checked::before{transform:translateX(16px);background:var(--gold);}
+.seg{display:flex;gap:5px;flex:none;}
+.seg button{
+  border:1px solid var(--card-border);background:none;color:var(--fog);
+  border-radius:8px;padding:5px 11px;font-family:'JetBrains Mono',monospace;font-size:0.6rem;
+}
+.seg button.active{background:rgba(202,168,118,0.18);color:var(--gold);border-color:rgba(202,168,118,0.4);}
+
+/* Menú corto que aparece al mantener presionada una app en el cajón. */
+.ctx-menu{
+  position:fixed;z-index:40;
+  background:rgba(16,12,9,0.96);
+  border:1px solid var(--card-border);
+  border-radius:12px;
+  padding:6px;
+  display:flex;flex-direction:column;
+  min-width:170px;
+  opacity:0;pointer-events:none;
+  transform:translateY(4px);
+  transition:opacity 0.14s ease, transform 0.14s ease;
+}
+.ctx-menu.show{opacity:1;pointer-events:auto;transform:translateY(0);}
+.ctx-menu button{
+  background:none;border:none;color:var(--ink);text-align:left;
+  padding:10px 12px;border-radius:8px;
+  font-family:'JetBrains Mono',monospace;font-size:0.62rem;
+}
+.ctx-menu button:active{background:rgba(255,255,255,0.08);}
 </style>
 
 <div class="bg"></div>
@@ -331,21 +424,8 @@ html,body{
   </div>
 
   <div class="quick">
-    <div class="lbl">ACCESOS RÁPIDOS</div>
-    <div class="quick-grid">
-      <button class="qbtn" data-tip="mensajes">
-        <span class="box"><svg class="icon-svg" style="width:22px;height:22px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7A2.5 2.5 0 0 1 17.5 16H10l-4.5 3.5V16H6.5A2.5 2.5 0 0 1 4 13.5v-7Z"/><circle cx="9" cy="10" r="0.9" fill="currentColor" stroke="none"/><circle cx="12" cy="10" r="0.9" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="0.9" fill="currentColor" stroke="none"/></svg></span><span class="qlabel">Mensajes</span>
-      </button>
-      <button class="qbtn" data-tip="telefono">
-        <span class="box"><svg class="icon-svg" style="width:20px;height:20px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6.6 10.8c1.4 2.8 3.8 5.2 6.6 6.6l2.2-2.2c.3-.3.7-.4 1.1-.3 1.2.4 2.5.6 3.8.6.6 0 1 .4 1 1v3.4c0 .6-.4 1-1 1C10.6 21 3 13.4 3 3.9c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.6.6 3.8.1.4 0 .8-.3 1.1L6.6 10.8Z"/></svg></span><span class="qlabel">Teléfono</span>
-      </button>
-      <button class="qbtn" data-tip="explorar">
-        <span class="box"><svg class="icon-svg" style="width:24px;height:24px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="5"/><ellipse cx="12" cy="12" rx="10" ry="3.2" transform="rotate(-18 12 12)"/></svg></span><span class="qlabel">Explorar</span>
-      </button>
-      <button class="qbtn" data-tip="camara">
-        <span class="box"><svg class="icon-svg" style="width:22px;height:22px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1-2h7l1 2h2A1.5 1.5 0 0 1 20 8.5v9A1.5 1.5 0 0 1 18.5 19h-13A1.5 1.5 0 0 1 4 17.5v-9Z"/><circle cx="12" cy="12.5" r="3.2"/></svg></span><span class="qlabel">Cámara</span>
-      </button>
-    </div>
+    <div class="lbl">FAVORITOS</div>
+    <div class="quick-grid" id="favoritesGrid"></div>
   </div>
 
   <button class="chevron-btn" id="chevronBtn">
@@ -360,8 +440,37 @@ html,body{
     <div class="apps-title">Tus apps</div>
     <button class="apps-close" id="appsClose">✕</button>
   </div>
+  <div class="apps-search">
+    <input type="text" id="appsSearchInput" placeholder="Buscar por nombre…" autocomplete="off" spellcheck="false">
+  </div>
   <div class="apps-grid" id="appsGrid"></div>
 </div>
+
+<div class="apps-panel" id="settingsPanel">
+  <div class="apps-hdr">
+    <div class="apps-title">Ajustes</div>
+    <button class="apps-close" id="settingsClose">✕</button>
+  </div>
+  <div class="settings-list">
+    <label class="setting-row"><span>Mostrar saludo</span><input type="checkbox" id="setGreet"></label>
+    <label class="setting-row"><span>Mostrar fecha y clima</span><input type="checkbox" id="setDatebar"></label>
+    <label class="setting-row"><span>Mostrar nombres bajo íconos</span><input type="checkbox" id="setLabels"></label>
+    <label class="setting-row"><span>Animaciones</span><input type="checkbox" id="setAnim"></label>
+    <label class="setting-row"><span>Tema claro</span><input type="checkbox" id="setLight"></label>
+    <div class="setting-row"><span>Tamaño de íconos</span>
+      <div class="seg" id="setIconSize">
+        <button data-v="44">S</button><button data-v="52">M</button><button data-v="62">L</button>
+      </div>
+    </div>
+    <div class="setting-row"><span>Columnas del cajón</span>
+      <div class="seg" id="setCols">
+        <button data-v="3">3</button><button data-v="4">4</button><button data-v="5">5</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="ctx-menu" id="ctxMenu"></div>
 
 <script>
 // Saludo + fecha reales — mismo lenguaje que el resto de orakOS: nada
@@ -429,15 +538,14 @@ function showToast(msg){
 // ── Puente nativo: si esto corre dentro de la app de Android de verdad
 // (Capacitor con nuestro plugin OrakLauncher registrado), estas funciones
 // existen y hacen cosas reales — listar apps, abrirlas, abrir el navegador,
-// el marcador, la cámara, una URL. Si no (probando en un navegador normal),
-// caen todas a un aviso honesto en vez de fingir. ─────────────────────────
+// el marcador, la cámara, una URL, y avisar cuando se instala/quita algo.
+// Si no (probando en un navegador normal), caen todas a un aviso honesto
+// en vez de fingir. ─────────────────────────────────────────────────────
 function orak(){ return window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.OrakLauncher; }
 
 // Avisa (una barra chica, no un modal) si orakOS todavía no es el launcher
 // permanente del sistema — y vuelve a revisar cada vez que regresas a la
-// app (por ejemplo, después de tocar "hacerlo permanente" y responder el
-// diálogo real de Android), para que la barra desaparezca sola cuando ya
-// quedó puesto de verdad.
+// app, para que la barra desaparezca sola cuando ya quedó puesto de verdad.
 const defaultBar = document.getElementById('defaultBar');
 async function checkDefaultLauncher(){
   const bridge = orak();
@@ -455,11 +563,26 @@ document.getElementById('defaultBtn').addEventListener('click', () => {
 document.addEventListener('visibilitychange', () => { if(!document.hidden) checkDefaultLauncher(); });
 checkDefaultLauncher();
 
-document.getElementById('ringBtn').addEventListener('click', () => {
+// Toca el logo → abre Orak Universe. Lo mantiene presionado → ajustes.
+let ringPressTimer = null, ringLongPressed = false;
+const ringBtn = document.getElementById('ringBtn');
+ringBtn.addEventListener('touchstart', () => {
+  ringLongPressed = false;
+  ringPressTimer = setTimeout(() => { ringLongPressed = true; openSettingsPanel(); }, 480);
+}, {passive:true});
+ringBtn.addEventListener('touchend', () => {
+  clearTimeout(ringPressTimer);
+  if(!ringLongPressed){
+    const bridge = orak();
+    if(bridge) bridge.openUrl({ url: 'https://orakuniverse.com' });
+    else { window.open('https://orakuniverse.com', '_blank'); showToast('abriendo Orak Universe…'); }
+  }
+});
+ringBtn.addEventListener('click', e => { if(!('ontouchstart' in window)) {
   const bridge = orak();
   if(bridge) bridge.openUrl({ url: 'https://orakuniverse.com' });
   else { window.open('https://orakuniverse.com', '_blank'); showToast('abriendo Orak Universe…'); }
-});
+}});
 
 const QUICK_ACTIONS = {
   mensajes: b => b.openMessaging(),
@@ -467,17 +590,7 @@ const QUICK_ACTIONS = {
   explorar: b => b.openBrowser(),
   camara:   b => b.openCamera(),
 };
-document.querySelectorAll('.qbtn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const bridge = orak();
-    const action = QUICK_ACTIONS[btn.dataset.tip];
-    if(bridge && action){
-      action(bridge).catch(() => showToast('no encontré una app para eso'));
-    } else {
-      showToast('solo funciona instalado en el teléfono');
-    }
-  });
-});
+
 function askSubmit(){
   const input = document.getElementById('askInput');
   if(!input.value.trim()) return;
@@ -489,14 +602,12 @@ document.getElementById('askInput').addEventListener('keydown', e => { if(e.key 
 document.getElementById('askInput').addEventListener('mousedown', e => e.stopPropagation());
 document.getElementById('askInput').addEventListener('touchstart', e => e.stopPropagation());
 
-// ── Panel de apps reales — sube desde abajo (con el botón de flecha o
-// deslizando el dedo), muestra las apps instaladas de verdad en el
-// teléfono, y tocar una la abre. En navegador normal usa una lista de
-// muestra nada más para poder ver cómo se ve. ────────────────────────────
-const appsPanel = document.getElementById('appsPanel');
-const appsGrid = document.getElementById('appsGrid');
-let appsLoaded = false;
-
+// ═══════════════════════════════════════════════════════════════════════
+// Apps reales: se piden una vez al abrir la app (no solo cuando se abre el
+// cajón), para que los favoritos ya tengan ícono/nombre real desde el
+// primer segundo. Se vuelven a pedir solas cuando Android avisa que algo
+// se instaló/desinstaló/actualizó (evento 'appsChanged').
+// ═══════════════════════════════════════════════════════════════════════
 const MOCK_APPS = [
   { packageName:'mock.whatsapp', label:'WhatsApp' },
   { packageName:'mock.chrome', label:'Chrome' },
@@ -506,7 +617,134 @@ const MOCK_APPS = [
   { packageName:'mock.musica', label:'Música' },
 ];
 
-function renderApps(list){
+let ALL_APPS = [];
+let appsReady = false;
+
+async function loadAllApps(){
+  const bridge = orak();
+  if(bridge){
+    try {
+      const res = await bridge.listApps();
+      ALL_APPS = res.apps || [];
+      appsReady = true;
+      return ALL_APPS;
+    } catch(e) { /* cae a la lista de muestra */ }
+  }
+  ALL_APPS = MOCK_APPS;
+  appsReady = true;
+  return ALL_APPS;
+}
+function findApp(pkg){ return ALL_APPS.find(a => a.packageName === pkg); }
+
+function launchOrToast(pkg){
+  const bridge = orak();
+  if(bridge) bridge.launchApp({ packageName: pkg }).catch(() => showToast('no pude abrir esa app'));
+  else showToast('solo funciona instalado en el teléfono');
+}
+
+// ── Favoritos: se guardan como lista de package names en el propio
+// teléfono (localStorage de la app). Nada codificado a mano — si están
+// vacíos, se sugiere ir al cajón a elegir. ────────────────────────────
+const FAV_KEY = 'orak-favorites';
+function getFavorites(){
+  try { return JSON.parse(localStorage.getItem(FAV_KEY)) || []; } catch(e){ return []; }
+}
+function setFavorites(list){ localStorage.setItem(FAV_KEY, JSON.stringify(list)); }
+function isFavorite(pkg){ return getFavorites().includes(pkg); }
+function toggleFavorite(pkg){
+  let favs = getFavorites();
+  if(favs.includes(pkg)) favs = favs.filter(p => p !== pkg);
+  else favs.push(pkg);
+  setFavorites(favs);
+  renderFavorites();
+}
+
+const favoritesGrid = document.getElementById('favoritesGrid');
+function renderFavorites(){
+  const favs = getFavorites();
+  if(!favs.length){
+    favoritesGrid.innerHTML = `<div class="favorites-empty">mantén presionada una app en el cajón para agregarla aquí</div>`;
+    return;
+  }
+  favoritesGrid.innerHTML = favs.map(pkg => {
+    const app = findApp(pkg);
+    const label = app ? app.label : pkg;
+    const icon = app && app.icon ? `<img src="${app.icon}">` : '▢';
+    return `<button class="qbtn" data-pkg="${pkg}"><span class="box">${icon}</span><span class="qlabel">${label}</span></button>`;
+  }).join('');
+  favoritesGrid.querySelectorAll('.qbtn').forEach(btn => wireFavoriteCell(btn));
+}
+
+// Tocar abre la app. Mantener presionado sin arrastrar quita de favoritos
+// (con confirmación corta vía menú). Arrastrar reordena en vivo.
+function wireFavoriteCell(btn){
+  let pressTimer = null, longPressed = false, dragging = false;
+  let startX = 0;
+  btn.addEventListener('touchstart', e => {
+    longPressed = false; dragging = false;
+    startX = e.touches[0].clientX;
+    pressTimer = setTimeout(() => {
+      longPressed = true;
+      showCtxMenu(e.touches[0].clientX, e.touches[0].clientY, [
+        { label:'Quitar de favoritos', action: () => toggleFavorite(btn.dataset.pkg) },
+      ]);
+    }, 450);
+  }, {passive:true});
+  btn.addEventListener('touchmove', e => {
+    if(Math.abs(e.touches[0].clientX - startX) > 12){
+      clearTimeout(pressTimer);
+      if(!dragging && !longPressed){ dragging = true; btn.classList.add('dragging'); }
+    }
+    if(dragging){
+      const x = e.touches[0].clientX, y = e.touches[0].clientY;
+      const under = document.elementFromPoint(x, y);
+      const otherBtn = under && under.closest('.qbtn');
+      if(otherBtn && otherBtn !== btn && otherBtn.parentElement === favoritesGrid){
+        const favs = getFavorites();
+        const from = favs.indexOf(btn.dataset.pkg);
+        const to = favs.indexOf(otherBtn.dataset.pkg);
+        if(from !== -1 && to !== -1){
+          favs.splice(to, 0, favs.splice(from, 1)[0]);
+          setFavorites(favs);
+          renderFavorites();
+        }
+      }
+    }
+  }, {passive:true});
+  btn.addEventListener('touchend', () => {
+    clearTimeout(pressTimer);
+    if(dragging){ btn.classList.remove('dragging'); return; }
+    if(!longPressed) launchOrToast(btn.dataset.pkg);
+  });
+}
+
+// ── Menú contextual chico (mantener presionado en el cajón / favoritos) ──
+const ctxMenu = document.getElementById('ctxMenu');
+function showCtxMenu(x, y, items){
+  ctxMenu.innerHTML = items.map((it,i) => `<button data-i="${i}">${it.label}</button>`).join('');
+  ctxMenu.querySelectorAll('button').forEach((b,i) => {
+    b.addEventListener('click', () => { items[i].action(); hideCtxMenu(); });
+  });
+  const w = 180, h = items.length * 40 + 12;
+  const left = Math.min(window.innerWidth - w - 10, Math.max(10, x - w/2));
+  const top = Math.min(window.innerHeight - h - 10, y - 10);
+  ctxMenu.style.left = left + 'px';
+  ctxMenu.style.top = top + 'px';
+  ctxMenu.classList.add('show');
+}
+function hideCtxMenu(){ ctxMenu.classList.remove('show'); }
+document.addEventListener('touchstart', e => {
+  if(!e.target.closest('.ctx-menu')) hideCtxMenu();
+}, {passive:true});
+
+// ── Cajón de apps: sube desde abajo, muestra TODAS las apps reales
+// (orden alfabético), con buscador (nombre o package name), y mantener
+// presionada una la agrega/quita de favoritos. ───────────────────────────
+const appsPanel = document.getElementById('appsPanel');
+const appsGrid = document.getElementById('appsGrid');
+const appsSearchInput = document.getElementById('appsSearchInput');
+
+function renderAppsGrid(list){
   if(!list.length){
     appsGrid.innerHTML = `<div class="apps-empty">no encontré apps</div>`;
     return;
@@ -514,37 +752,116 @@ function renderApps(list){
   const sorted = list.slice().sort((a,b) => a.label.localeCompare(b.label, 'es'));
   appsGrid.innerHTML = sorted.map(app => `
     <button class="app-cell" data-pkg="${app.packageName}">
-      <span class="aicon">${app.icon ? `<img src="${app.icon}">` : '▢'}</span>
+      <span class="aicon">${app.icon ? `<img src="${app.icon}">` : '▢'}${isFavorite(app.packageName) ? '<span class="fav-dot"></span>' : ''}</span>
       <span class="alabel">${app.label}</span>
     </button>`).join('');
   appsGrid.querySelectorAll('.app-cell').forEach(cell => {
-    cell.addEventListener('click', () => {
-      const bridge = orak();
+    let pressTimer = null, longPressed = false;
+    cell.addEventListener('touchstart', e => {
+      longPressed = false;
       const pkg = cell.dataset.pkg;
-      if(bridge) bridge.launchApp({ packageName: pkg }).catch(() => showToast('no pude abrir esa app'));
-      else showToast('solo funciona instalado en el teléfono');
+      pressTimer = setTimeout(() => {
+        longPressed = true;
+        const fav = isFavorite(pkg);
+        showCtxMenu(e.touches[0].clientX, e.touches[0].clientY, [
+          { label: fav ? 'Quitar de favoritos' : 'Agregar a favoritos', action: () => {
+              toggleFavorite(pkg);
+              renderAppsGrid(currentAppsFilter());
+              showToast(fav ? 'quitado de favoritos' : 'agregado a favoritos');
+            } },
+        ]);
+      }, 450);
+    }, {passive:true});
+    cell.addEventListener('touchend', () => {
+      clearTimeout(pressTimer);
+      if(!longPressed) launchOrToast(cell.dataset.pkg);
     });
   });
 }
+function currentAppsFilter(){
+  const q = appsSearchInput.value.trim().toLowerCase();
+  if(!q) return ALL_APPS;
+  return ALL_APPS.filter(a => a.label.toLowerCase().includes(q) || a.packageName.toLowerCase().includes(q));
+}
+appsSearchInput.addEventListener('input', () => renderAppsGrid(currentAppsFilter()));
+appsSearchInput.addEventListener('mousedown', e => e.stopPropagation());
+appsSearchInput.addEventListener('touchstart', e => e.stopPropagation());
 
 async function openAppsPanel(){
   appsPanel.classList.add('open');
-  if(appsLoaded) return;
-  const bridge = orak();
-  if(bridge){
-    try {
-      const res = await bridge.listApps();
-      renderApps(res.apps || []);
-      appsLoaded = true;
-      return;
-    } catch(e) { /* cae a la lista de muestra */ }
-  }
-  renderApps(MOCK_APPS);
+  if(!appsReady) await loadAllApps();
+  appsSearchInput.value = '';
+  renderAppsGrid(ALL_APPS);
 }
 function closeAppsPanel(){ appsPanel.classList.remove('open'); }
-
 document.getElementById('chevronBtn').addEventListener('click', openAppsPanel);
 document.getElementById('appsClose').addEventListener('click', closeAppsPanel);
+
+// ── Ajustes: todo se guarda y se vuelve a aplicar solo al abrir la app. ──
+const SETTINGS_KEY = 'orak-settings';
+const DEFAULT_SETTINGS = {
+  greet:true, datebar:true, labels:true, anim:true, light:false, iconSize:52, cols:4,
+};
+function getSettings(){
+  try { return Object.assign({}, DEFAULT_SETTINGS, JSON.parse(localStorage.getItem(SETTINGS_KEY))); }
+  catch(e){ return Object.assign({}, DEFAULT_SETTINGS); }
+}
+function setSettings(s){ localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); applySettings(s); }
+function applySettings(s){
+  document.body.classList.toggle('hide-greet', !s.greet);
+  document.body.classList.toggle('hide-datebar', !s.datebar);
+  document.body.classList.toggle('hide-labels', !s.labels);
+  document.body.classList.toggle('no-anim', !s.anim);
+  document.documentElement.setAttribute('data-theme', s.light ? 'light' : 'dark');
+  document.documentElement.style.setProperty('--icon-size', s.iconSize + 'px');
+  document.documentElement.style.setProperty('--cols', s.cols);
+}
+function renderSettingsUI(){
+  const s = getSettings();
+  document.getElementById('setGreet').checked = s.greet;
+  document.getElementById('setDatebar').checked = s.datebar;
+  document.getElementById('setLabels').checked = s.labels;
+  document.getElementById('setAnim').checked = s.anim;
+  document.getElementById('setLight').checked = s.light;
+  document.querySelectorAll('#setIconSize button').forEach(b => b.classList.toggle('active', Number(b.dataset.v) === s.iconSize));
+  document.querySelectorAll('#setCols button').forEach(b => b.classList.toggle('active', Number(b.dataset.v) === s.cols));
+}
+['setGreet','setDatebar','setLabels','setAnim','setLight'].forEach(id => {
+  document.getElementById(id).addEventListener('change', e => {
+    const s = getSettings();
+    const key = { setGreet:'greet', setDatebar:'datebar', setLabels:'labels', setAnim:'anim', setLight:'light' }[id];
+    s[key] = e.target.checked;
+    setSettings(s);
+  });
+});
+document.querySelectorAll('#setIconSize button').forEach(b => {
+  b.addEventListener('click', () => { const s = getSettings(); s.iconSize = Number(b.dataset.v); setSettings(s); renderSettingsUI(); });
+});
+document.querySelectorAll('#setCols button').forEach(b => {
+  b.addEventListener('click', () => { const s = getSettings(); s.cols = Number(b.dataset.v); setSettings(s); renderSettingsUI(); });
+});
+applySettings(getSettings());
+
+const settingsPanel = document.getElementById('settingsPanel');
+function openSettingsPanel(){ renderSettingsUI(); settingsPanel.classList.add('open'); }
+function closeSettingsPanel(){ settingsPanel.classList.remove('open'); }
+document.getElementById('settingsClose').addEventListener('click', closeSettingsPanel);
+
+// ── Arranque: carga las apps reales ya, para que favoritos/cajón estén
+// listos, y escucha instalar/desinstalar/actualizar para refrescarse sola. ──
+loadAllApps().then(() => renderFavorites());
+const bridgeAtStart = orak();
+if(bridgeAtStart && bridgeAtStart.addListener){
+  bridgeAtStart.addListener('appsChanged', async () => {
+    await loadAllApps();
+    // limpia favoritos de apps que ya no existen (se desinstalaron)
+    const stillInstalled = new Set(ALL_APPS.map(a => a.packageName));
+    const favs = getFavorites().filter(p => stillInstalled.has(p));
+    setFavorites(favs);
+    renderFavorites();
+    if(appsPanel.classList.contains('open')) renderAppsGrid(currentAppsFilter());
+  });
+}
 
 // ── Carrusel de la luna/clima/evento/Orak AI — cuatro páginas que se
 // deslizan horizontal, con los puntos abajo marcando en cuál estás ──────
@@ -585,7 +902,7 @@ carouselEl.addEventListener('touchend', () => {
 // distancia, para no dispararse con un toque cualquiera.
 let swipeStartY = 0, swipeTracking = false, swipeMoved = false;
 document.addEventListener('touchstart', e => {
-  if(e.target.closest('input') || e.target.closest('.carousel')) return;
+  if(e.target.closest('input') || e.target.closest('.carousel') || e.target.closest('.apps-panel')) return;
   const y = e.touches[0].clientY;
   swipeTracking = y > window.innerHeight * 0.8;
   swipeStartY = y;
