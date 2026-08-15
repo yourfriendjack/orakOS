@@ -432,14 +432,40 @@ const clouds = Array.from({length:CLOUD_COUNT}, (_, i) => ({
   alpha: 0.05 + Math.random()*0.05,
 }));
 
+// El cielo respira con la hora real del día — más frío y plomizo al alba,
+// más cálido a mediodía, ember en su punto más intenso al atardecer, y de
+// vuelta a la noche profunda. No es decorativo: cambia solo, sin que nadie
+// lo toque, igual que el cielo de verdad.
+const SKY_KEYFRAMES = [
+  { h:0,  top:[13,9,6],  mid:[36,22,16], low:[51,25,15] },
+  { h:6,  top:[10,8,11], mid:[28,19,27], low:[38,19,27] },
+  { h:12, top:[16,10,7], mid:[46,27,17], low:[64,30,16] },
+  { h:18, top:[19,8,5],  mid:[56,20,10], low:[77,22,8]  },
+  { h:24, top:[13,9,6],  mid:[36,22,16], low:[51,25,15] },
+];
+function lerpRGB(a,b,f){ return [0,1,2].map(i => Math.round(a[i]+(b[i]-a[i])*f)); }
+function rgbCss(c){ return `rgb(${c[0]},${c[1]},${c[2]})`; }
+function currentSkyPalette(){
+  const now = new Date();
+  const h = now.getHours() + now.getMinutes()/60;
+  let a = SKY_KEYFRAMES[0], b = SKY_KEYFRAMES[1];
+  for(let i=0;i<SKY_KEYFRAMES.length-1;i++){
+    if(h >= SKY_KEYFRAMES[i].h && h <= SKY_KEYFRAMES[i+1].h){ a = SKY_KEYFRAMES[i]; b = SKY_KEYFRAMES[i+1]; break; }
+  }
+  const f = (h - a.h) / (b.h - a.h);
+  return { top:lerpRGB(a.top,b.top,f), mid:lerpRGB(a.mid,b.mid,f), low:lerpRGB(a.low,b.low,f) };
+}
+let currentSky = currentSkyPalette();
+setInterval(() => { currentSky = currentSkyPalette(); }, 60000);
+
 let t = 0;
 function draw(){
   t += 0.016;
 
   const g = ctx.createLinearGradient(0,0,0,H);
-  g.addColorStop(0, '#0d0906');
-  g.addColorStop(0.55, '#241610');
-  g.addColorStop(1, '#33190f');
+  g.addColorStop(0, rgbCss(currentSky.top));
+  g.addColorStop(0.55, rgbCss(currentSky.mid));
+  g.addColorStop(1, rgbCss(currentSky.low));
   ctx.fillStyle = g;
   ctx.fillRect(0,0,W,H);
 
