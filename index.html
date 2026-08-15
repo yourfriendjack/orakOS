@@ -924,15 +924,29 @@ function createWindowElement(item, bar){
 function wireAppContent(win, item){
   if(item.kind === 'notes') wireNotes(win, item);
   else if(item.kind === 'calc') wireCalc(win);
-  else if(item.kind === 'paint') wireCanvas(win);
+  else if(item.kind === 'paint') wireCanvas(win, item);
   else if(item.kind === 'store') renderStoreBody(win);
 }
 
+// Si corremos dentro de Electron (window.orakFS existe, vía preload.js),
+// el contenido se guarda como archivo real en disco; si no (la página web /
+// Artifact), cae de vuelta a localStorage — mismo código, dos entornos.
 function wireNotes(win, item){
   const ta = win.querySelector('.app-notes');
   const key = 'orakos-note-' + item.id;
-  ta.value = localStorage.getItem(key) || '';
-  ta.addEventListener('input', () => localStorage.setItem(key, ta.value));
+  if(window.orakFS){
+    window.orakFS.readNote(item.id).then(content => { ta.value = content || ''; });
+  } else {
+    ta.value = localStorage.getItem(key) || '';
+  }
+  let noteSaveTimer = null;
+  ta.addEventListener('input', () => {
+    clearTimeout(noteSaveTimer);
+    noteSaveTimer = setTimeout(() => {
+      if(window.orakFS) window.orakFS.writeNote(item.id, ta.value);
+      else localStorage.setItem(key, ta.value);
+    }, 300);
+  });
   ta.addEventListener('mousedown', e => e.stopPropagation());
 }
 
@@ -974,7 +988,7 @@ function wireCalc(win){
   render();
 }
 
-function wireCanvas(win){
+function wireCanvas(win, item){
   const canvas = win.querySelector('.app-canvas');
   const clearBtn = win.querySelector('.app-clear');
   const ctx = canvas.getContext('2d');
@@ -983,7 +997,22 @@ function wireCanvas(win){
     canvas.width = rect.width;
     canvas.height = rect.height;
   }
-  requestAnimationFrame(fit);
+  function persist(){
+    if(window.orakFS) window.orakFS.writeCanvas(item.id, canvas.toDataURL('image/png'));
+  }
+  requestAnimationFrame(() => {
+    fit();
+    // Solo Electron guarda el dibujo como PNG real — en la página web no hay
+    // dónde persistirlo aparte de la sesión misma, así que no se restaura ahí.
+    if(window.orakFS){
+      window.orakFS.readCanvas(item.id).then(dataUrl => {
+        if(!dataUrl) return;
+        const img = new Image();
+        img.onload = () => ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        img.src = dataUrl;
+      });
+    }
+  });
   let drawing = false, lastX = 0, lastY = 0;
   canvas.addEventListener('mousedown', e => {
     drawing = true;
@@ -999,8 +1028,8 @@ function wireCanvas(win){
     ctx.beginPath(); ctx.moveTo(lastX, lastY); ctx.lineTo(x, y); ctx.stroke();
     lastX = x; lastY = y;
   });
-  window.addEventListener('mouseup', () => { drawing = false; });
-  clearBtn.addEventListener('click', e => { e.stopPropagation(); ctx.clearRect(0,0,canvas.width,canvas.height); });
+  window.addEventListener('mouseup', () => { if(drawing){ drawing = false; persist(); } });
+  clearBtn.addEventListener('click', e => { e.stopPropagation(); ctx.clearRect(0,0,canvas.width,canvas.height); persist(); });
 }
 
 function renderStoreBody(win){
