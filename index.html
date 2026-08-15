@@ -167,17 +167,11 @@ html,body{
   margin-bottom:7px;
 }
 
-/* Ventana expandida: la carpeta/archivo "abierto" en grande, con controles reales */
-.overlay-backdrop{
-  position:fixed;inset:0;
-  background:rgba(8,6,14,0.6);
-  backdrop-filter:blur(2px);
-  z-index:20;
-  opacity:0;
-}
+/* Ventana expandida: la carpeta/archivo "abierto" en grande, con controles reales.
+   Puede haber varias al mismo tiempo, cada una con su propio z-index. */
 .expanded-window{
   position:fixed;
-  z-index:21;
+  cursor:default;
   border-radius:10px;
   overflow:hidden;
   background:linear-gradient(180deg, #f4ede0, #e8ded0);
@@ -708,16 +702,24 @@ function removeFromDock(item){
   if(i !== -1){ minimizedDock.splice(i,1); renderDock(); }
 }
 
-// ── Ventana expandida: abrir una carpeta/archivo en grande, con los tres
+// ── Ventanas: varias abiertas a la vez, cada una con sus propios
 // controles reales de la esquina (cerrar, minimizar, expandir) ──────────
-let expandedOverlay = null;
+let openWindows = [];
+let topZ = 21;
+let cascadeStep = 0;
+
+function findOpenWindowFor(item){
+  return openWindows.find(w => w.item === item);
+}
+function bringToFront(state){
+  topZ++;
+  state.win.style.zIndex = topZ;
+}
 
 function openWindow(item, rect, bar){
+  const existing = findOpenWindowFor(item);
+  if(existing){ bringToFront(existing); return; }
   bumpMemory();
-  const backdrop = document.createElement('div');
-  backdrop.className = 'overlay-backdrop';
-  backdrop.addEventListener('click', () => collapseExpanded('minimize'));
-  document.body.appendChild(backdrop);
 
   const win = document.createElement('div');
   win.className = 'expanded-window';
@@ -737,14 +739,20 @@ function openWindow(item, rect, bar){
     </div>`;
   document.body.appendChild(win);
 
-  const finalW = Math.min(520, window.innerWidth*0.6);
-  const finalH = Math.min(560, window.innerHeight*0.72);
-  const finalLeft = (window.innerWidth-finalW)/2;
-  const finalTop = (window.innerHeight-finalH)/2;
+  // Cada ventana nueva se acomoda un poco más abajo/a la derecha que la
+  // anterior (cascada), para que varias abiertas no queden exactamente
+  // encimadas — igual que en cualquier sistema operativo de verdad.
+  const finalW = Math.min(440, window.innerWidth*0.42);
+  const finalH = Math.min(480, window.innerHeight*0.6);
+  cascadeStep = (cascadeStep + 1) % 7;
+  const finalLeft = (window.innerWidth-finalW)/2 + cascadeStep*30 - 90;
+  const finalTop = (window.innerHeight-finalH)/2 + cascadeStep*24 - 72;
   win.style.width = finalW+'px';
   win.style.height = finalH+'px';
   win.style.left = finalLeft+'px';
   win.style.top = finalTop+'px';
+  topZ++;
+  win.style.zIndex = topZ;
 
   const scaleX = rect.width/finalW, scaleY = rect.height/finalH;
   const dx = rect.left - finalLeft, dy = rect.top - finalTop;
@@ -755,17 +763,19 @@ function openWindow(item, rect, bar){
   win.style.transition = 'transform 0.38s cubic-bezier(.2,.8,.2,1), opacity 0.28s ease';
   win.style.transform = 'translate(0px,0px) scale(1,1)';
   win.style.opacity = '1';
-  requestAnimationFrame(() => { backdrop.style.transition = 'opacity 0.3s ease'; backdrop.style.opacity = '1'; });
 
-  win.querySelector('.dot-red').addEventListener('click', e => { e.stopPropagation(); collapseExpanded('close'); });
-  win.querySelector('.dot-yellow').addEventListener('click', e => { e.stopPropagation(); collapseExpanded('minimize'); });
-  win.querySelector('.dot-green').addEventListener('click', e => { e.stopPropagation(); toggleMaximize(); });
+  const state = { win, item, bar, finalW, finalH, finalLeft, finalTop };
+
+  win.addEventListener('mousedown', () => bringToFront(state));
+  win.querySelector('.dot-red').addEventListener('click', e => { e.stopPropagation(); collapseExpanded('close', state); });
+  win.querySelector('.dot-yellow').addEventListener('click', e => { e.stopPropagation(); collapseExpanded('minimize', state); });
+  win.querySelector('.dot-green').addEventListener('click', e => { e.stopPropagation(); toggleMaximize(state); });
 
   const enterEl = win.querySelector('.doc-enter');
   if(enterEl){
     enterEl.addEventListener('click', e => {
       e.stopPropagation();
-      collapseExpanded('none');
+      collapseExpanded('none', state);
       transitionLevel(() => {
         navStack.push({ items:item.children, label:item.label });
         renderLevel(true);
@@ -773,11 +783,10 @@ function openWindow(item, rect, bar){
     });
   }
 
-  expandedOverlay = { win, backdrop, item, bar, finalW, finalH, finalLeft, finalTop };
+  openWindows.push(state);
 }
 
 function expandCard(item, el){
-  if(expandedOverlay) return;
   removeFromDock(item); // por si ya estaba minimizada
   const idx = Array.from(deckEl.children).indexOf(el);
   const bar = BAR_COLORS[idx % BAR_COLORS.length];
@@ -785,7 +794,6 @@ function expandCard(item, el){
 }
 
 function reopenFromDock(entry){
-  if(expandedOverlay) return;
   const i = minimizedDock.indexOf(entry);
   const chip = dockEl.children[i];
   const rect = chip.getBoundingClientRect();
@@ -796,9 +804,8 @@ function reopenFromDock(entry){
 // Maximizar/restaurar: crece a casi toda la pantalla, y con un segundo clic
 // vuelve a su tamaño normal. Usa el tamaño real en pantalla en todo momento
 // (no el guardado al abrir), así funciona bien sin importar el estado.
-function toggleMaximize(){
-  if(!expandedOverlay) return;
-  const { win, finalW, finalH, finalLeft, finalTop } = expandedOverlay;
+function toggleMaximize(state){
+  const { win, finalW, finalH, finalLeft, finalTop } = state;
   const maximized = win.dataset.maximized === '1';
   win.style.transition = 'width 0.32s cubic-bezier(.2,.8,.2,1), height 0.32s cubic-bezier(.2,.8,.2,1), left 0.32s cubic-bezier(.2,.8,.2,1), top 0.32s cubic-bezier(.2,.8,.2,1)';
   if(maximized){
@@ -817,19 +824,18 @@ function toggleMaximize(){
   }
 }
 
-function collapseExpanded(mode){
-  if(!expandedOverlay) return;
-  const { win, backdrop, item, bar } = expandedOverlay;
-  expandedOverlay = null;
-  if(mode === 'none'){ win.remove(); backdrop.remove(); return; }
+function collapseExpanded(mode, state){
+  if(!state) return;
+  const { win, item, bar, finalW, finalH, finalLeft, finalTop } = state;
+  openWindows = openWindows.filter(w => w !== state);
+  if(mode === 'none'){ win.remove(); return; }
 
-  backdrop.style.opacity = '0';
   if(mode === 'close'){
     removeFromDock(item);
     win.style.transition = 'opacity 0.22s ease, transform 0.22s ease';
     win.style.opacity = '0';
     win.style.transform = (win.style.transform || '') + ' scale(0.97)';
-    setTimeout(() => { win.remove(); backdrop.remove(); }, 340);
+    setTimeout(() => win.remove(), 340);
   } else {
     // Minimizar: se agrega al dock primero (para tener un lugar real al
     // cual encogerse), y la ventana se anima hacia ese chip usando su
@@ -845,7 +851,7 @@ function collapseExpanded(mode){
       win.style.transition = 'transform 0.32s cubic-bezier(.3,.7,.3,1), opacity 0.32s ease';
       win.style.transform = `translate(${dx}px,${dy}px) scale(${scaleX},${scaleY})`;
       win.style.opacity = '0.15';
-      setTimeout(() => { win.remove(); backdrop.remove(); }, 340);
+      setTimeout(() => win.remove(), 340);
     });
   }
 }
@@ -1006,7 +1012,6 @@ let searchActive = -1;
 let searchMatches = [];
 
 function openSearch(){
-  if(expandedOverlay) return;
   searchDropdown.classList.add('open');
   renderSearchResults(searchInput.value);
   searchInput.focus();
