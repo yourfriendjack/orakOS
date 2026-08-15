@@ -182,6 +182,16 @@ html,body{
 .expanded-window .doc-bar{height:34px;padding:0 12px;gap:8px;cursor:grab;}
 .expanded-window .doc-bar.dragging{cursor:grabbing;}
 .expanded-window .doc-body{padding:26px 30px;flex:1;min-height:0;}
+.rsz{position:absolute;z-index:6;}
+.rsz-n{top:0;left:12px;right:12px;height:6px;cursor:ns-resize;}
+.rsz-s{bottom:0;left:12px;right:12px;height:6px;cursor:ns-resize;}
+.rsz-e{top:12px;right:0;bottom:12px;width:6px;cursor:ew-resize;}
+.rsz-w{top:12px;left:0;bottom:12px;width:6px;cursor:ew-resize;}
+.rsz-ne{top:0;right:0;width:14px;height:14px;cursor:nesw-resize;}
+.rsz-nw{top:0;left:0;width:14px;height:14px;cursor:nwse-resize;}
+.rsz-se{bottom:0;right:0;width:14px;height:14px;cursor:nwse-resize;}
+.rsz-sw{bottom:0;left:0;width:14px;height:14px;cursor:nesw-resize;}
+.expanded-window[data-maximized="1"] .rsz{display:none;}
 .expanded-window .doc-title{font-size:0.85rem;margin-bottom:20px;color:rgba(40,30,20,0.75);}
 .expanded-window .doc-line{height:6px;margin-bottom:12px;}
 .dot{width:11px;height:11px;border-radius:50%;cursor:pointer;transition:filter 0.15s, transform 0.15s;display:block;}
@@ -1046,7 +1056,11 @@ function createWindowElement(item, bar){
       <span class="dot-wrap"><span class="dot dot-yellow"></span><span class="dot-tip">minimizar</span></span>
       <span class="dot-wrap"><span class="dot dot-green"></span><span class="dot-tip">expandir</span></span>
     </div>
-    ${bodyHtmlFor(item)}`;
+    ${bodyHtmlFor(item)}
+    <span class="rsz rsz-n"></span><span class="rsz rsz-s"></span>
+    <span class="rsz rsz-e"></span><span class="rsz rsz-w"></span>
+    <span class="rsz rsz-ne"></span><span class="rsz rsz-nw"></span>
+    <span class="rsz rsz-se"></span><span class="rsz rsz-sw"></span>`;
   document.body.appendChild(win);
   wireAppContent(win, item);
   return win;
@@ -1278,6 +1292,7 @@ function wireWindow(win, item, bar, finalW, finalH, finalLeft, finalTop){
   const state = { win, item, bar, finalW, finalH, finalLeft, finalTop };
   win.addEventListener('mousedown', () => bringToFront(state));
   makeDraggable(win, state);
+  makeResizable(win, state);
   win.querySelector('.dot-red').addEventListener('click', e => { e.stopPropagation(); collapseExpanded('close', state); });
   win.querySelector('.dot-yellow').addEventListener('click', e => { e.stopPropagation(); collapseExpanded('minimize', state); });
   win.querySelector('.dot-green').addEventListener('click', e => { e.stopPropagation(); toggleMaximize(state); scheduleSave(); });
@@ -1439,6 +1454,61 @@ function makeDraggable(win, state){
 
   window.addEventListener('mouseup', () => {
     if(dragging){ dragging = false; bar.classList.remove('dragging'); scheduleSave(); }
+  });
+}
+
+// Ocho asas invisibles pegadas a los bordes/esquinas — tomar y arrastrar para
+// cambiar el tamaño, como en cualquier ventana de verdad. No funciona si está
+// maximizada (no tendría sentido: no hay borde real que jalar).
+const MIN_WIN_W = 260, MIN_WIN_H = 180;
+function makeResizable(win, state){
+  win.querySelectorAll('.rsz').forEach(handle => {
+    const dir = handle.className.split(' ').find(c => c.startsWith('rsz-')).slice(4);
+    let resizing = false, startX = 0, startY = 0, startW = 0, startH = 0, startLeft = 0, startTop = 0;
+
+    handle.addEventListener('mousedown', e => {
+      if(win.dataset.maximized === '1') return;
+      resizing = true;
+      bringToFront(state);
+      startX = e.clientX; startY = e.clientY;
+      startW = win.offsetWidth; startH = win.offsetHeight;
+      startLeft = parseFloat(win.style.left) || 0;
+      startTop = parseFloat(win.style.top) || 0;
+      win.style.transition = 'none';
+      e.preventDefault();
+      e.stopPropagation();
+    });
+
+    window.addEventListener('mousemove', e => {
+      if(!resizing) return;
+      const dx = e.clientX - startX, dy = e.clientY - startY;
+      let w = startW, h = startH, left = startLeft, top = startTop;
+      if(dir.includes('e')) w = Math.max(MIN_WIN_W, startW + dx);
+      if(dir.includes('s')) h = Math.max(MIN_WIN_H, startH + dy);
+      if(dir.includes('w')){
+        w = Math.max(MIN_WIN_W, startW - dx);
+        left = startLeft + (startW - w);
+      }
+      if(dir.includes('n')){
+        h = Math.max(MIN_WIN_H, startH - dy);
+        top = startTop + (startH - h);
+      }
+      win.style.width = w + 'px';
+      win.style.height = h + 'px';
+      win.style.left = left + 'px';
+      win.style.top = top + 'px';
+    });
+
+    window.addEventListener('mouseup', () => {
+      if(resizing){
+        resizing = false;
+        // El nuevo tamaño se vuelve el tamaño "normal" — si maximiza y luego
+        // restaura, debe volver a esto, no al tamaño original de apertura.
+        state.finalW = win.offsetWidth;
+        state.finalH = win.offsetHeight;
+        scheduleSave();
+      }
+    });
   });
 }
 
