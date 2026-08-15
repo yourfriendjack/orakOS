@@ -574,27 +574,35 @@ function draw(){
 draw();
 
 // ── Datos: raíz + carpetas vacías anidadas (2 niveles de sub-carpetas de demo) ──
-function makeEmptyFolders(count, labelPrefix, depthLeft){
-  return Array.from({length:count}, (_, i) => ({
-    glyph:'▢',
-    label:`${labelPrefix} ${i+1}`,
-    info: depthLeft > 0 ? 'vacía · toca para abrir' : 'vacía · sin más contenido',
-    children: depthLeft > 0 ? makeEmptyFolders(6, 'Sub-carpeta', depthLeft-1) : null,
-  }));
+// Cada carpeta tiene un id estable (según su posición) para poder guardar
+// y restaurar en qué carpeta estabas, qué tenías abierto, etc.
+function makeEmptyFolders(count, labelPrefix, depthLeft, parentId){
+  return Array.from({length:count}, (_, i) => {
+    const id = `${parentId}-${i}`;
+    return {
+      id,
+      glyph:'▢',
+      label:`${labelPrefix} ${i+1}`,
+      info: depthLeft > 0 ? 'vacía · toca para abrir' : 'vacía · sin más contenido',
+      children: depthLeft > 0 ? makeEmptyFolders(6, 'Sub-carpeta', depthLeft-1, id) : null,
+    };
+  });
 }
 const ROOT = [
-  { glyph:'🕯', label:'Vela',     info:'presencia',   children: makeEmptyFolders(11, 'Carpeta vacía', 1) },
-  { glyph:'◷', label:'Memoria',  info:'recuerdos',   children: makeEmptyFolders(11, 'Carpeta vacía', 1) },
-  { glyph:'◈', label:'Sala',     info:'espacio propio', children: makeEmptyFolders(11, 'Carpeta vacía', 1) },
-  { glyph:'▤', label:'Archivos', info:'documentos',  children: makeEmptyFolders(11, 'Carpeta vacía', 1) },
+  { id:'root-0', glyph:'🕯', label:'Vela',     info:'presencia',      children: makeEmptyFolders(11, 'Carpeta vacía', 1, 'root-0') },
+  { id:'root-1', glyph:'◷', label:'Memoria',  info:'recuerdos',      children: makeEmptyFolders(11, 'Carpeta vacía', 1, 'root-1') },
+  { id:'root-2', glyph:'◈', label:'Sala',     info:'espacio propio', children: makeEmptyFolders(11, 'Carpeta vacía', 1, 'root-2') },
+  { id:'root-3', glyph:'▤', label:'Archivos', info:'documentos',     children: makeEmptyFolders(11, 'Carpeta vacía', 1, 'root-3') },
 ];
 
 // ── Pila de navegación: cada nivel es un arreglo de items con su propio deck ──
 const deckEl = document.getElementById('deck');
 const crumbEl = document.getElementById('crumb');
-let navStack = [{ items: ROOT, label: 'orakOS' }];
+let navStack = [{ items: ROOT, label: 'orakOS', id: 'root' }];
 let icons = [];
 let depth = 0;
+let saveTimer = null; // declarado aquí arriba: scheduleSave() ya se llama
+                       // desde renderLevel() durante la carga inicial
 const SPACING = 260;
 const NEAR_FADE_START = SPACING * 0.5;
 const NEAR_FADE_END   = SPACING * 0.95;
@@ -635,6 +643,7 @@ function renderLevel(cascadeIn){
   renderDepth();
   renderCrumb();
   if(cascadeIn) cascadeReveal();
+  scheduleSave();
 }
 
 // Cada tarjeta entra como si se deslizara desde dentro de un cajón, en cascada
@@ -717,11 +726,7 @@ function bringToFront(state){
   state.win.style.zIndex = topZ;
 }
 
-function openWindow(item, rect, bar){
-  const existing = findOpenWindowFor(item);
-  if(existing){ bringToFront(existing); return; }
-  bumpMemory();
-
+function createWindowElement(item, bar){
   const win = document.createElement('div');
   win.className = 'expanded-window';
   const lineWidths = [88,64,76,50,70];
@@ -739,6 +744,38 @@ function openWindow(item, rect, bar){
         : `<div class="doc-empty">${item.info}</div>`}
     </div>`;
   document.body.appendChild(win);
+  return win;
+}
+
+function wireWindow(win, item, bar, finalW, finalH, finalLeft, finalTop){
+  const state = { win, item, bar, finalW, finalH, finalLeft, finalTop };
+  win.addEventListener('mousedown', () => bringToFront(state));
+  makeDraggable(win, state);
+  win.querySelector('.dot-red').addEventListener('click', e => { e.stopPropagation(); collapseExpanded('close', state); });
+  win.querySelector('.dot-yellow').addEventListener('click', e => { e.stopPropagation(); collapseExpanded('minimize', state); });
+  win.querySelector('.dot-green').addEventListener('click', e => { e.stopPropagation(); toggleMaximize(state); scheduleSave(); });
+
+  const enterEl = win.querySelector('.doc-enter');
+  if(enterEl){
+    enterEl.addEventListener('click', e => {
+      e.stopPropagation();
+      collapseExpanded('none', state);
+      transitionLevel(() => {
+        navStack.push({ items:item.children, label:item.label, id:item.id });
+        renderLevel(true);
+      });
+    });
+  }
+  openWindows.push(state);
+  return state;
+}
+
+function openWindow(item, rect, bar){
+  const existing = findOpenWindowFor(item);
+  if(existing){ bringToFront(existing); return; }
+  bumpMemory();
+
+  const win = createWindowElement(item, bar);
 
   // Cada ventana nueva se acomoda un poco más abajo/a la derecha que la
   // anterior (cascada), para que varias abiertas no queden exactamente
@@ -765,27 +802,33 @@ function openWindow(item, rect, bar){
   win.style.transform = 'translate(0px,0px) scale(1,1)';
   win.style.opacity = '1';
 
-  const state = { win, item, bar, finalW, finalH, finalLeft, finalTop };
+  wireWindow(win, item, bar, finalW, finalH, finalLeft, finalTop);
+  scheduleSave();
+}
 
-  win.addEventListener('mousedown', () => bringToFront(state));
-  makeDraggable(win, state);
-  win.querySelector('.dot-red').addEventListener('click', e => { e.stopPropagation(); collapseExpanded('close', state); });
-  win.querySelector('.dot-yellow').addEventListener('click', e => { e.stopPropagation(); collapseExpanded('minimize', state); });
-  win.querySelector('.dot-green').addEventListener('click', e => { e.stopPropagation(); toggleMaximize(state); });
+// Recrea una ventana tal como quedó guardada (posición, tamaño, si estaba
+// maximizada) — sin la animación de "crecer desde la tarjeta", porque al
+// recargar la página no hay ninguna tarjeta visible todavía de dónde salir.
+function restoreWindow(item, bar, left, top, w, h, maximized){
+  if(findOpenWindowFor(item)) return;
+  const win = createWindowElement(item, bar);
+  win.style.width = w+'px';
+  win.style.height = h+'px';
+  win.style.left = left+'px';
+  win.style.top = top+'px';
+  topZ++;
+  win.style.zIndex = topZ;
+  win.style.opacity = '0';
+  void win.offsetWidth;
+  win.style.transition = 'opacity 0.4s ease';
+  win.style.opacity = '1';
+  if(maximized) win.dataset.maximized = '1';
 
-  const enterEl = win.querySelector('.doc-enter');
-  if(enterEl){
-    enterEl.addEventListener('click', e => {
-      e.stopPropagation();
-      collapseExpanded('none', state);
-      transitionLevel(() => {
-        navStack.push({ items:item.children, label:item.label });
-        renderLevel(true);
-      });
-    });
-  }
-
-  openWindows.push(state);
+  const finalW = Math.min(440, window.innerWidth*0.42);
+  const finalH = Math.min(480, window.innerHeight*0.6);
+  const finalLeft = (window.innerWidth-finalW)/2;
+  const finalTop = (window.innerHeight-finalH)/2;
+  wireWindow(win, item, bar, finalW, finalH, finalLeft, finalTop);
 }
 
 function expandCard(item, el){
@@ -864,7 +907,7 @@ function makeDraggable(win, state){
   });
 
   window.addEventListener('mouseup', () => {
-    if(dragging){ dragging = false; bar.classList.remove('dragging'); }
+    if(dragging){ dragging = false; bar.classList.remove('dragging'); scheduleSave(); }
   });
 }
 
@@ -872,6 +915,7 @@ function collapseExpanded(mode, state){
   if(!state) return;
   const { win, item, bar, finalW, finalH, finalLeft, finalTop } = state;
   openWindows = openWindows.filter(w => w !== state);
+  scheduleSave();
   if(mode === 'none'){ win.remove(); return; }
 
   if(mode === 'close'){
@@ -904,7 +948,7 @@ function onIconClick(item, el){
   markActive();
   if(item.children && item.children.length){
     transitionLevel(() => {
-      navStack.push({ items:item.children, label:item.label });
+      navStack.push({ items:item.children, label:item.label, id:item.id });
       renderLevel(true);
     });
   } else {
@@ -954,6 +998,7 @@ window.addEventListener('wheel', e => {
   depth = Math.min(N-1, Math.max(0, depth));
   renderDepth();
   markActive();
+  scheduleSave();
 }, { passive:false });
 
 // ── Estado ambiental: un pulso que refleja si algo está pasando ahora
@@ -1039,14 +1084,19 @@ function flattenTree(){
     items.forEach((item, idx) => {
       results.push({ item, idx, path:[...trail, item.label], stack:stackForLevel });
       if(item.children && item.children.length){
-        walk(item.children, [...trail, item.label], [...stackForLevel, { items:item.children, label:item.label }]);
+        walk(item.children, [...trail, item.label], [...stackForLevel, { items:item.children, label:item.label, id:item.id }]);
       }
     });
   }
-  walk(ROOT, [], [{ items:ROOT, label:'orakOS' }]);
+  walk(ROOT, [], [{ items:ROOT, label:'orakOS', id:'root' }]);
   return results;
 }
 const SEARCH_INDEX = flattenTree();
+const ITEM_BY_ID = new Map(SEARCH_INDEX.map(r => [r.item.id, r.item]));
+function barColorFor(id){
+  const idx = SEARCH_INDEX.findIndex(r => r.item.id === id);
+  return BAR_COLORS[Math.max(0, idx) % BAR_COLORS.length];
+}
 
 const searchBar = document.getElementById('searchBar');
 const searchDropdown = document.getElementById('searchDropdown');
@@ -1114,4 +1164,68 @@ window.addEventListener('keydown', e => {
     searchInput.focus();
   }
 });
+
+// ── Persistencia: recordar en qué carpeta estabas, qué tenías abierto y
+// minimizado, y cuánta memoria llevas acumulada — para que recargar la
+// página no borre nada, como en cualquier sistema operativo real ────────
+const STORAGE_KEY = 'orakos-semilla-v1';
+function scheduleSave(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveState, 250);
+}
+function saveState(){
+  try {
+    const navPath = navStack.slice(1).map(lvl => lvl.id);
+    const windows = openWindows.map(w => ({
+      id: w.item.id,
+      left: parseFloat(w.win.style.left) || 0,
+      top: parseFloat(w.win.style.top) || 0,
+      w: w.win.offsetWidth,
+      h: w.win.offsetHeight,
+      maximized: w.win.dataset.maximized === '1',
+    }));
+    const dock = minimizedDock.map(e => e.item.id);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ navPath, depth, windows, dock, memoryCount }));
+  } catch(e) {}
+}
+function loadState(){
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch(e) { return null; }
+}
+function applyNavPath(path){
+  navStack = [{ items:ROOT, label:'orakOS', id:'root' }];
+  let cur = ROOT;
+  for(const id of path){
+    const found = cur.find(it => it.id === id);
+    if(!found || !found.children || !found.children.length) break;
+    navStack.push({ items:found.children, label:found.label, id:found.id });
+    cur = found.children;
+  }
+}
+window.addEventListener('beforeunload', saveState);
+
+(function restoreSavedState(){
+  const saved = loadState();
+  if(!saved) return;
+  applyNavPath(saved.navPath || []);
+  renderLevel(false);
+  if(typeof saved.depth === 'number' && icons.length){
+    depth = Math.min(icons.length-1, Math.max(0, saved.depth));
+    renderDepth();
+  }
+  memoryCount = saved.memoryCount || 0;
+  if(memoryCount > 0){
+    statusTextEl.textContent = `memoria · ${memoryCount} ${memoryCount === 1 ? 'recuerdo' : 'recuerdos'}`;
+  }
+  (saved.dock || []).forEach(id => {
+    const item = ITEM_BY_ID.get(id);
+    if(item) addToDock(item, barColorFor(id));
+  });
+  (saved.windows || []).forEach(w => {
+    const item = ITEM_BY_ID.get(w.id);
+    if(item) restoreWindow(item, barColorFor(w.id), w.left, w.top, w.w, w.h, w.maximized);
+  });
+})();
 </script>
