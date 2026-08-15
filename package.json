@@ -1,0 +1,12 @@
+{
+  "name": "orakos",
+  "version": "0.1.0",
+  "description": "orakOS — la semilla, ahora como app de escritorio real",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^32.3.3"
+  }
+}
