@@ -1,0 +1,466 @@
+<title>ORAK Universe — inicio</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<style>
+@font-face{ font-family:'Cinzel'; src:local('Cinzel'); }
+:root{
+  --bg-top:#0c0f14;
+  --bg-low:#080a0d;
+  --gold:#caa876;
+  --gold-dim:rgba(202,168,118,0.6);
+  --card:rgba(255,255,255,0.045);
+  --card-border:rgba(255,255,255,0.09);
+  --ink:#f3f1ec;
+  --fog:rgba(243,241,236,0.5);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{
+  margin:0;padding:0;height:100%;overflow:hidden;
+  background:var(--bg-low);
+  font-family:'Crimson Pro',Georgia,serif;
+  color:var(--ink);
+  touch-action:none;
+  overscroll-behavior:none;
+}
+.bg{
+  position:fixed;inset:0;
+  background:
+    radial-gradient(120% 60% at 50% -6%, rgba(202,168,118,0.08), transparent 60%),
+    linear-gradient(180deg, var(--bg-top), var(--bg-low));
+}
+.wrap{
+  position:fixed;inset:0;
+  padding:calc(18px + env(safe-area-inset-top)) 20px calc(16px + env(safe-area-inset-bottom));
+  display:flex;flex-direction:column;
+  gap:18px;
+}
+
+.hdr{display:flex;justify-content:space-between;align-items:flex-start;}
+.brand{display:flex;flex-direction:column;line-height:1.1;}
+.brand .word{
+  font-family:'Cinzel',Georgia,serif;font-size:1.3rem;letter-spacing:0.06em;
+  color:var(--gold);display:flex;align-items:center;gap:6px;
+}
+.brand .word .spark{font-size:0.8rem;}
+.brand .sub{
+  font-family:'JetBrains Mono',monospace;font-size:0.5rem;letter-spacing:0.25em;
+  color:rgba(243,241,236,0.35);margin-top:2px;margin-left:1px;
+}
+.datebox{text-align:right;}
+.datebox .day{
+  font-family:'Cinzel',Georgia,serif;font-size:0.95rem;color:var(--gold);
+}
+.datebox .full{
+  font-family:'JetBrains Mono',monospace;font-size:0.58rem;
+  color:var(--fog);margin-top:2px;
+}
+.weather{
+  display:flex;align-items:center;gap:6px;justify-content:flex-end;
+  margin-top:8px;
+}
+.weather .temp{font-size:1.05rem;color:var(--ink);}
+.weather .icon{font-size:1rem;}
+.weather .cond{
+  font-family:'JetBrains Mono',monospace;font-size:0.5rem;color:var(--fog);
+  display:block;text-align:right;margin-top:1px;
+}
+
+.greet{margin-top:2px;}
+.greet .h1{font-size:1.5rem;color:var(--ink);}
+.greet .h2{
+  font-family:'JetBrains Mono',monospace;font-size:0.68rem;
+  color:var(--fog);margin-top:4px;line-height:1.5;
+}
+
+.middle{
+  flex:1;min-height:0;
+  display:flex;align-items:center;justify-content:center;
+  gap:14px;
+}
+.rail{
+  flex:none;
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  padding:10px 8px;
+  background:var(--card);
+  border:1px solid var(--card-border);
+  border-radius:26px;
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+}
+.rail-btn{
+  width:38px;height:38px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.05rem;color:var(--gold-dim);
+  background:none;border:none;
+  transition:background 0.15s ease, color 0.15s ease;
+}
+.icon-svg{width:18px;height:18px;display:block;}
+.rail-btn.active{background:rgba(255,255,255,0.12);color:var(--ink);}
+.rail-btn:active{background:rgba(255,255,255,0.08);}
+
+.moonstage{
+  flex:1;min-width:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:14px;
+}
+.orbit-wrap{position:relative;width:min(50vw, 190px);aspect-ratio:1;}
+.orbit-ring{
+  position:absolute;inset:0;border-radius:50%;
+  border:1px solid rgba(202,168,118,0.16);
+}
+.orbit-ring.r2{inset:-16px;border-color:rgba(202,168,118,0.09);}
+.orbit-dot{
+  position:absolute;width:5px;height:5px;border-radius:50%;
+  background:var(--gold);
+  box-shadow:0 0 8px 2px rgba(202,168,118,0.7);
+  left:50%;top:-16px;margin:-2.5px 0 0 -2.5px;
+  transform-origin:2.5px calc(50% + 16px);
+  animation:orbit 40s linear infinite;
+}
+@keyframes orbit{ to{ transform:rotate(360deg); } }
+#moonCanvas{position:absolute;inset:14%;border-radius:50%;}
+
+.eventcard{
+  width:100%;max-width:340px;
+  display:flex;align-items:center;justify-content:space-between;
+  gap:12px;padding:14px 16px;
+  background:var(--card);
+  border:1px solid var(--card-border);
+  border-radius:16px;
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+}
+.eventcard .lbl{
+  font-family:'JetBrains Mono',monospace;font-size:0.5rem;letter-spacing:0.05em;
+  color:var(--gold-dim);text-transform:uppercase;
+}
+.eventcard .ttl{font-size:0.95rem;color:var(--ink);margin-top:3px;}
+.eventcard .sub{
+  font-family:'JetBrains Mono',monospace;font-size:0.56rem;color:var(--fog);margin-top:3px;
+}
+.eventcard .glyph{
+  flex:none;width:36px;height:36px;border-radius:10px;
+  background:rgba(202,168,118,0.12);
+  display:flex;align-items:center;justify-content:center;font-size:1rem;
+}
+
+.slider{
+  flex:none;
+  width:34px;height:190px;
+  display:flex;flex-direction:column;align-items:center;justify-content:space-between;
+  padding:12px 0;
+  background:var(--card);
+  border:1px solid var(--card-border);
+  border-radius:20px;
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  position:relative;
+}
+.slider .sicon{font-size:0.85rem;color:var(--gold-dim);z-index:2;}
+.slider-track{
+  position:absolute;left:50%;top:34px;bottom:34px;width:3px;
+  background:rgba(255,255,255,0.12);border-radius:2px;
+  transform:translateX(-50%);
+}
+.slider-fill{
+  position:absolute;left:50%;bottom:34px;width:3px;
+  background:linear-gradient(180deg, var(--gold), rgba(202,168,118,0.3));
+  border-radius:2px;
+  transform:translateX(-50%);
+}
+.slider-thumb{
+  position:absolute;left:50%;width:16px;height:16px;border-radius:50%;
+  background:var(--ink);
+  box-shadow:0 0 10px 2px rgba(202,168,118,0.5);
+  transform:translate(-50%,50%);
+  z-index:3;
+}
+
+.quick{width:100%;}
+.quick .lbl{
+  font-family:'JetBrains Mono',monospace;font-size:0.58rem;letter-spacing:0.08em;
+  color:var(--fog);text-align:center;margin-bottom:10px;
+}
+.quick-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:10px;
+}
+.qbtn{
+  display:flex;flex-direction:column;align-items:center;gap:7px;
+  background:none;border:none;color:var(--ink);
+}
+.qbtn .box{
+  width:56px;height:56px;border-radius:16px;
+  background:var(--card);
+  border:1px solid var(--card-border);
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.3rem;color:var(--gold);
+  transition:transform 0.12s ease, background 0.12s ease;
+}
+.qbtn:active .box{transform:scale(0.93);background:rgba(255,255,255,0.09);}
+.qbtn.orak .box{
+  background:radial-gradient(circle at 35% 30%, rgba(255,236,205,0.9), rgba(202,168,118,0.25) 60%);
+  box-shadow:0 0 16px 2px rgba(202,168,118,0.35);
+}
+.qbtn .qlabel{
+  font-family:'JetBrains Mono',monospace;font-size:0.54rem;color:var(--fog);
+}
+
+.searchbar{
+  display:flex;align-items:center;gap:10px;
+  padding:12px 10px 12px 16px;
+  background:var(--card);
+  border:1px solid var(--card-border);
+  border-radius:26px;
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+}
+.searchbar .s-icon{color:var(--gold-dim);font-size:0.85rem;}
+.searchbar input{
+  flex:1;background:none;border:none;outline:none;
+  font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:var(--ink);
+}
+.searchbar input::placeholder{color:rgba(243,241,236,0.35);}
+.searchbar .orb{
+  flex:none;width:34px;height:34px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%, rgba(255,236,205,0.95), rgba(202,168,118,0.3) 65%);
+  box-shadow:0 0 14px 2px rgba(202,168,118,0.4);
+  border:none;
+}
+
+.toast{
+  position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));
+  transform:translateX(-50%) translateY(10px);
+  background:rgba(10,12,16,0.92);
+  border:1px solid var(--card-border);
+  color:var(--fog);
+  font-family:'JetBrains Mono',monospace;font-size:0.6rem;
+  padding:9px 16px;border-radius:20px;
+  opacity:0;pointer-events:none;
+  transition:opacity 0.2s ease, transform 0.2s ease;
+  z-index:20;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+.upward-hint{
+  position:fixed;bottom:calc(6px + env(safe-area-inset-bottom));left:50%;
+  transform:translateX(-50%);
+  font-family:'JetBrains Mono',monospace;font-size:0.5rem;
+  color:rgba(243,241,236,0.3);letter-spacing:0.05em;
+}
+</style>
+
+<div class="bg"></div>
+<div class="wrap">
+  <div class="hdr">
+    <div class="brand">
+      <div class="word"><span>ORAK</span><span class="spark">✦</span></div>
+      <div class="sub">UNIVERSE</div>
+    </div>
+    <div class="datebox">
+      <div class="day" id="dayName">--</div>
+      <div class="full" id="fullDate">-- ----- ----</div>
+      <div class="weather"><svg class="icon-svg" style="color:var(--fog);width:16px;height:16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7 17h10a3.5 3.5 0 0 0 .5-6.96A5 5 0 0 0 8 8.2 3.5 3.5 0 0 0 7 17Z"/></svg><span class="temp">26°</span></div>
+      <span class="cond">Nublado</span>
+    </div>
+  </div>
+
+  <div class="greet">
+    <div class="h1" id="greetLine">Buen día, Jack.</div>
+    <div class="h2">Todo listo para crear hoy.</div>
+  </div>
+
+  <div class="middle">
+    <div class="rail" id="rail">
+      <button class="rail-btn active" data-tip="inicio"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9h12v-9"/></svg></button>
+      <button class="rail-btn" data-tip="explorar tus apps">✦</button>
+      <button class="rail-btn" data-tip="biblioteca"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 6c-1.8-1.2-4-1.6-6-1.2v13c2-.4 4.2 0 6 1.2 1.8-1.2 4-1.6 6-1.2V4.8c-2-.4-4.2 0-6 1.2Z"/><path d="M12 6v13"/></svg></button>
+      <button class="rail-btn" data-tip="escribir">✎</button>
+      <button class="rail-btn" data-tip="social"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="8" r="2.6"/><path d="M4 19c0-3 2.5-5 5-5s5 2 5 5"/><circle cx="17" cy="9" r="2.1"/><path d="M14.8 14.2c2-.3 4.2.9 4.2 3.8"/></svg></button>
+      <button class="rail-btn" data-tip="ajustes">⚙</button>
+    </div>
+
+    <div class="moonstage">
+      <div class="orbit-wrap">
+        <div class="orbit-ring r2"></div>
+        <div class="orbit-ring"></div>
+        <div class="orbit-dot"></div>
+        <canvas id="moonCanvas"></canvas>
+      </div>
+      <div class="eventcard">
+        <div>
+          <div class="lbl">próximo evento</div>
+          <div class="ttl">Escritura colectiva</div>
+          <div class="sub">20:00 — Capítulo 5</div>
+        </div>
+        <div class="glyph"><svg class="icon-svg" style="color:var(--gold);width:17px;height:17px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="5.5" width="16" height="14" rx="2"/><path d="M4 9.5h16M8 3.5v3M16 3.5v3"/></svg></div>
+      </div>
+    </div>
+
+    <div class="slider" id="slider">
+      <span class="sicon">☀</span>
+      <div class="slider-track"></div>
+      <div class="slider-fill" id="sliderFill"></div>
+      <div class="slider-thumb" id="sliderThumb"></div>
+      <span class="sicon">☾</span>
+    </div>
+  </div>
+
+  <div class="quick">
+    <div class="lbl">ACCESOS RÁPIDOS</div>
+    <div class="quick-grid">
+      <button class="qbtn" data-tip="explorar">
+        <span class="box"><svg class="icon-svg" style="width:24px;height:24px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="5"/><ellipse cx="12" cy="12" rx="10" ry="3.2" transform="rotate(-18 12 12)"/></svg></span><span class="qlabel">Explorar</span>
+      </button>
+      <button class="qbtn" data-tip="mensajes">
+        <span class="box"><svg class="icon-svg" style="width:22px;height:22px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7A2.5 2.5 0 0 1 17.5 16H10l-4.5 3.5V16H6.5A2.5 2.5 0 0 1 4 13.5v-7Z"/><circle cx="9" cy="10" r="0.9" fill="currentColor" stroke="none"/><circle cx="12" cy="10" r="0.9" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="0.9" fill="currentColor" stroke="none"/></svg></span><span class="qlabel">Mensajes</span>
+      </button>
+      <button class="qbtn" data-tip="biblioteca">
+        <span class="box"><svg class="icon-svg" style="width:22px;height:22px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 6c-1.8-1.2-4-1.6-6-1.2v13c2-.4 4.2 0 6 1.2 1.8-1.2 4-1.6 6-1.2V4.8c-2-.4-4.2 0-6 1.2Z"/><path d="M12 6v13"/></svg></span><span class="qlabel">Biblioteca</span>
+      </button>
+      <button class="qbtn orak" id="orakQuick">
+        <span class="box">✦</span><span class="qlabel">Orak AI</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="searchbar">
+    <span class="s-icon">✦</span>
+    <input type="text" id="askInput" placeholder="Pregúntale a Orak…" autocomplete="off" spellcheck="false">
+    <button class="orb" id="askOrb"></button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="upward-hint">desliza hacia arriba: todas tus apps</div>
+
+<script>
+// Saludo + fecha reales — mismo lenguaje que el resto de orakOS: nada
+// decorativo que no refleje algo cierto (la hora de verdad, el día de verdad).
+const DIAS = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+function tick(){
+  const now = new Date();
+  const h = now.getHours();
+  const saludo = h < 12 ? 'Buen día' : h < 19 ? 'Buenas tardes' : 'Buenas noches';
+  document.getElementById('greetLine').textContent = `${saludo}, Jack.`;
+  document.getElementById('dayName').textContent = DIAS[now.getDay()];
+  document.getElementById('fullDate').textContent = `${now.getDate()} ${MESES[now.getMonth()]}, ${now.getFullYear()}`;
+}
+tick();
+setInterval(tick, 60000);
+
+// La luna: fase simple, iluminada desde un lado, quieta salvo el punto que
+// orbita despacio (ya en CSS) — vivo pero sin ruido, como el resto de la casa.
+const moonCv = document.getElementById('moonCanvas');
+const mctx = moonCv.getContext('2d');
+function fitMoon(){
+  const r = moonCv.getBoundingClientRect();
+  moonCv.width = r.width; moonCv.height = r.height;
+  drawMoon();
+}
+function drawMoon(){
+  const w = moonCv.width, h = moonCv.height;
+  if(!w || !h) return;
+  mctx.clearRect(0,0,w,h);
+  const cx = w/2, cy = h/2, r = Math.min(w,h)/2;
+  const base = mctx.createRadialGradient(cx-r*0.3, cy-r*0.3, r*0.1, cx, cy, r);
+  base.addColorStop(0, '#3a3a3e');
+  base.addColorStop(1, '#101013');
+  mctx.beginPath();
+  mctx.arc(cx, cy, r, 0, Math.PI*2);
+  mctx.fillStyle = base;
+  mctx.fill();
+  // filo iluminado, tipo cuarto creciente
+  const rim = mctx.createRadialGradient(cx+r*0.55, cy, 0, cx+r*0.55, cy, r*0.9);
+  rim.addColorStop(0, 'rgba(255,224,170,0.9)');
+  rim.addColorStop(0.5, 'rgba(202,168,118,0.25)');
+  rim.addColorStop(1, 'rgba(202,168,118,0)');
+  mctx.globalCompositeOperation = 'lighter';
+  mctx.beginPath();
+  mctx.arc(cx, cy, r, 0, Math.PI*2);
+  mctx.fillStyle = rim;
+  mctx.fill();
+  mctx.globalCompositeOperation = 'source-over';
+}
+window.addEventListener('resize', fitMoon);
+requestAnimationFrame(fitMoon);
+
+// Toast liviano para todo lo que todavía no está conectado de verdad.
+const toastEl = document.getElementById('toast');
+let toastTimer = null;
+function showToast(msg){
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1800);
+}
+
+document.querySelectorAll('.rail-btn:not(.active)').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if(btn.dataset.tip === 'explorar tus apps'){
+      window.location.href = 'launcher.html';
+    } else {
+      showToast('próximamente');
+    }
+  });
+});
+document.querySelectorAll('.qbtn:not(#orakQuick)').forEach(btn => {
+  btn.addEventListener('click', () => showToast('próximamente'));
+});
+document.getElementById('orakQuick').addEventListener('click', () => {
+  document.getElementById('askInput').focus();
+});
+function askSubmit(){
+  const v = document.getElementById('askInput').value.trim();
+  if(!v) return;
+  showToast('Vela todavía no puede responder aquí — pronto');
+  document.getElementById('askInput').value = '';
+}
+document.getElementById('askOrb').addEventListener('click', askSubmit);
+document.getElementById('askInput').addEventListener('keydown', e => { if(e.key === 'Enter') askSubmit(); });
+
+// El slider de brillo/día-noche: arrastrable, y de verdad atenúa la escena
+// un poco — no es solo decoración, aunque no esté conectado a nada externo.
+const sliderEl = document.getElementById('slider');
+const thumbEl = document.getElementById('sliderThumb');
+const fillEl = document.getElementById('sliderFill');
+let sliderVal = 0.6; // 0 = noche, 1 = día
+function renderSlider(){
+  const track = sliderEl.clientHeight - 68;
+  const y = 34 + (1-sliderVal)*track;
+  thumbEl.style.bottom = (sliderEl.clientHeight - y) + 'px';
+  fillEl.style.height = Math.max(0, sliderEl.clientHeight - y - 34) + 'px';
+  document.querySelector('.bg').style.filter = `brightness(${0.75 + sliderVal*0.5})`;
+}
+function setSliderFromClientY(clientY){
+  const rect = sliderEl.getBoundingClientRect();
+  const usable = rect.height - 68;
+  const rel = (rect.bottom - 34 - clientY) / usable;
+  sliderVal = Math.min(1, Math.max(0, rel));
+  renderSlider();
+}
+let draggingSlider = false;
+sliderEl.addEventListener('touchstart', e => { draggingSlider = true; setSliderFromClientY(e.touches[0].clientY); }, {passive:true});
+sliderEl.addEventListener('touchmove', e => { if(draggingSlider){ setSliderFromClientY(e.touches[0].clientY); e.preventDefault(); } }, {passive:false});
+window.addEventListener('touchend', () => { draggingSlider = false; });
+sliderEl.addEventListener('mousedown', e => { draggingSlider = true; setSliderFromClientY(e.clientY); });
+window.addEventListener('mousemove', e => { if(draggingSlider) setSliderFromClientY(e.clientY); });
+window.addEventListener('mouseup', () => { draggingSlider = false; });
+requestAnimationFrame(renderSlider);
+
+// Deslizar hacia arriba desde el cuerpo de la pantalla abre la escalera con
+// todas tus apps reales — el "launcher" completo que ya construimos.
+let swipeStartY = 0, swipeMoved = false;
+document.addEventListener('touchstart', e => {
+  if(e.target.closest('.slider') || e.target.closest('.searchbar') || e.target.closest('input')) return;
+  swipeStartY = e.touches[0].clientY;
+  swipeMoved = false;
+}, {passive:true});
+document.addEventListener('touchmove', e => {
+  if(e.target.closest('.slider')) return;
+  const dy = e.touches[0].clientY - swipeStartY;
+  if(dy < -70) swipeMoved = true;
+}, {passive:true});
+document.addEventListener('touchend', () => {
+  if(swipeMoved) window.location.href = 'launcher.html';
+});
+</script>
