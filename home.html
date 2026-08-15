@@ -24,7 +24,8 @@ html,body{
 .bg{
   position:fixed;inset:0;
   background:
-    radial-gradient(120% 60% at 50% -6%, rgba(202,168,118,0.08), transparent 60%),
+    linear-gradient(180deg, rgba(8,10,13,0.15), rgba(8,10,13,0.55) 70%, rgba(8,10,13,0.85)),
+    url('wallpaper.jpg') center center / cover no-repeat,
     linear-gradient(180deg, var(--bg-top), var(--bg-low));
 }
 .wrap{
@@ -43,6 +44,8 @@ html,body{
 }
 .greet .underline{width:28px;height:1px;background:rgba(255,255,255,0.22);margin-top:14px;}
 
+/* El logo de Orak: el mismo anillo con un punto que ya usamos para la luna,
+   pero girando despacio y sin parar — toca para abrir ORAK Universe. */
 .ring-btn{
   flex:none;width:38px;height:38px;border-radius:50%;
   border:1px solid rgba(202,168,118,0.4);
@@ -51,7 +54,9 @@ html,body{
 .ring-btn::after{
   content:'';position:absolute;width:5px;height:5px;border-radius:50%;
   background:var(--gold);box-shadow:0 0 6px 1px rgba(202,168,118,0.7);
-  top:1px;right:6px;
+  left:50%;top:0;margin:-2.5px 0 0 -2.5px;
+  transform-origin:2.5px 21.5px;
+  animation:orbit 6s linear infinite;
 }
 .ring-btn:active{background:rgba(255,255,255,0.06);}
 
@@ -188,6 +193,52 @@ html,body{
   white-space:nowrap;
 }
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* Panel de todas tus apps reales — sube desde abajo, no navega a otra
+   página, para que se sienta como abrir un cajón, no como cambiar de app. */
+.apps-panel{
+  position:fixed;inset:0;z-index:30;
+  background:rgba(8,10,13,0.88);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+  padding:calc(20px + env(safe-area-inset-top)) 20px calc(20px + env(safe-area-inset-bottom));
+  display:flex;flex-direction:column;gap:16px;
+  transform:translateY(100%);
+  transition:transform 0.3s cubic-bezier(.2,.8,.2,1);
+}
+.apps-panel.open{transform:translateY(0);}
+.apps-hdr{display:flex;align-items:center;justify-content:space-between;}
+.apps-title{font-size:1.1rem;color:var(--ink);}
+.apps-close{
+  width:32px;height:32px;border-radius:50%;
+  border:1px solid var(--card-border);background:none;color:var(--fog);
+  display:flex;align-items:center;justify-content:center;
+}
+.apps-grid{
+  flex:1;overflow-y:auto;
+  display:grid;grid-template-columns:repeat(4,1fr);gap:16px 8px;
+  align-content:start;
+  padding-bottom:20px;
+}
+.app-cell{
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  background:none;border:none;color:var(--ink);
+}
+.app-cell .aicon{
+  width:52px;height:52px;border-radius:14px;
+  background:var(--card);border:1px solid var(--card-border);
+  display:flex;align-items:center;justify-content:center;
+  overflow:hidden;
+}
+.app-cell .aicon img{width:100%;height:100%;object-fit:cover;}
+.app-cell .alabel{
+  font-family:'JetBrains Mono',monospace;font-size:0.5rem;color:var(--fog);
+  text-align:center;max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.apps-empty{
+  font-family:'JetBrains Mono',monospace;font-size:0.62rem;color:var(--fog);
+  text-align:center;margin-top:40px;
+}
 </style>
 
 <div class="bg"></div>
@@ -277,6 +328,14 @@ html,body{
 
 <div class="toast" id="toast"></div>
 
+<div class="apps-panel" id="appsPanel">
+  <div class="apps-hdr">
+    <div class="apps-title">Tus apps</div>
+    <button class="apps-close" id="appsClose">✕</button>
+  </div>
+  <div class="apps-grid" id="appsGrid"></div>
+</div>
+
 <script>
 // Saludo + fecha reales — mismo lenguaje que el resto de orakOS: nada
 // decorativo que no refleje algo cierto (la hora de verdad, el día de verdad).
@@ -340,9 +399,35 @@ function showToast(msg){
   toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1800);
 }
 
-document.getElementById('ringBtn').addEventListener('click', () => showToast('ajustes — próximamente'));
+// ── Puente nativo: si esto corre dentro de la app de Android de verdad
+// (Capacitor con nuestro plugin OrakLauncher registrado), estas funciones
+// existen y hacen cosas reales — listar apps, abrirlas, abrir el navegador,
+// el marcador, la cámara, una URL. Si no (probando en un navegador normal),
+// caen todas a un aviso honesto en vez de fingir. ─────────────────────────
+function orak(){ return window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.OrakLauncher; }
+
+document.getElementById('ringBtn').addEventListener('click', () => {
+  const bridge = orak();
+  if(bridge) bridge.openUrl({ url: 'https://orakuniverse.com' });
+  else { window.open('https://orakuniverse.com', '_blank'); showToast('abriendo Orak Universe…'); }
+});
+
+const QUICK_ACTIONS = {
+  mensajes: b => b.openMessaging(),
+  telefono: b => b.openDialer(),
+  explorar: b => b.openBrowser(),
+  camara:   b => b.openCamera(),
+};
 document.querySelectorAll('.qbtn').forEach(btn => {
-  btn.addEventListener('click', () => showToast('próximamente'));
+  btn.addEventListener('click', () => {
+    const bridge = orak();
+    const action = QUICK_ACTIONS[btn.dataset.tip];
+    if(bridge && action){
+      action(bridge).catch(() => showToast('no encontré una app para eso'));
+    } else {
+      showToast('solo funciona instalado en el teléfono');
+    }
+  });
 });
 function askSubmit(){
   const input = document.getElementById('askInput');
@@ -355,11 +440,62 @@ document.getElementById('askInput').addEventListener('keydown', e => { if(e.key 
 document.getElementById('askInput').addEventListener('mousedown', e => e.stopPropagation());
 document.getElementById('askInput').addEventListener('touchstart', e => e.stopPropagation());
 
-// El botón de flecha, igual que deslizar arriba, abre la escalera con todas
-// tus apps reales — el "launcher" completo que ya construimos.
-document.getElementById('chevronBtn').addEventListener('click', () => {
-  window.location.href = 'launcher.html';
-});
+// ── Panel de apps reales — sube desde abajo (con el botón de flecha o
+// deslizando el dedo), muestra las apps instaladas de verdad en el
+// teléfono, y tocar una la abre. En navegador normal usa una lista de
+// muestra nada más para poder ver cómo se ve. ────────────────────────────
+const appsPanel = document.getElementById('appsPanel');
+const appsGrid = document.getElementById('appsGrid');
+let appsLoaded = false;
+
+const MOCK_APPS = [
+  { packageName:'mock.whatsapp', label:'WhatsApp' },
+  { packageName:'mock.chrome', label:'Chrome' },
+  { packageName:'mock.camara', label:'Cámara' },
+  { packageName:'mock.fotos', label:'Fotos' },
+  { packageName:'mock.ajustes', label:'Ajustes' },
+  { packageName:'mock.musica', label:'Música' },
+];
+
+function renderApps(list){
+  if(!list.length){
+    appsGrid.innerHTML = `<div class="apps-empty">no encontré apps</div>`;
+    return;
+  }
+  const sorted = list.slice().sort((a,b) => a.label.localeCompare(b.label, 'es'));
+  appsGrid.innerHTML = sorted.map(app => `
+    <button class="app-cell" data-pkg="${app.packageName}">
+      <span class="aicon">${app.icon ? `<img src="${app.icon}">` : '▢'}</span>
+      <span class="alabel">${app.label}</span>
+    </button>`).join('');
+  appsGrid.querySelectorAll('.app-cell').forEach(cell => {
+    cell.addEventListener('click', () => {
+      const bridge = orak();
+      const pkg = cell.dataset.pkg;
+      if(bridge) bridge.launchApp({ packageName: pkg }).catch(() => showToast('no pude abrir esa app'));
+      else showToast('solo funciona instalado en el teléfono');
+    });
+  });
+}
+
+async function openAppsPanel(){
+  appsPanel.classList.add('open');
+  if(appsLoaded) return;
+  const bridge = orak();
+  if(bridge){
+    try {
+      const res = await bridge.listApps();
+      renderApps(res.apps || []);
+      appsLoaded = true;
+      return;
+    } catch(e) { /* cae a la lista de muestra */ }
+  }
+  renderApps(MOCK_APPS);
+}
+function closeAppsPanel(){ appsPanel.classList.remove('open'); }
+
+document.getElementById('chevronBtn').addEventListener('click', openAppsPanel);
+document.getElementById('appsClose').addEventListener('click', closeAppsPanel);
 
 // ── Carrusel de la luna/clima/evento/Orak AI — cuatro páginas que se
 // deslizan horizontal, con los puntos abajo marcando en cuál estás ──────
@@ -394,10 +530,10 @@ carouselEl.addEventListener('touchend', () => {
   renderPage();
 });
 
-// Deslizar hacia arriba desde el cuerpo de la pantalla abre la escalera con
-// todas tus apps reales — mismo destino que el botón de flecha, para quien
-// prefiera el gesto. Solo cuenta si EMPIEZA cerca de abajo y recorre
-// bastante distancia, para no dispararse con un toque cualquiera.
+// Deslizar hacia arriba desde el cuerpo de la pantalla abre el panel de tus
+// apps reales — mismo destino que el botón de flecha, para quien prefiera
+// el gesto. Solo cuenta si EMPIEZA cerca de abajo y recorre bastante
+// distancia, para no dispararse con un toque cualquiera.
 let swipeStartY = 0, swipeTracking = false, swipeMoved = false;
 document.addEventListener('touchstart', e => {
   if(e.target.closest('input') || e.target.closest('.carousel')) return;
@@ -412,7 +548,7 @@ document.addEventListener('touchmove', e => {
   if(dy < -130) swipeMoved = true;
 }, {passive:true});
 document.addEventListener('touchend', () => {
-  if(swipeTracking && swipeMoved) window.location.href = 'launcher.html';
+  if(swipeTracking && swipeMoved) openAppsPanel();
   swipeTracking = false;
 });
 </script>
