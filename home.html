@@ -29,84 +29,45 @@ html,body{
 }
 .wrap{
   position:fixed;inset:0;
-  padding:calc(18px + env(safe-area-inset-top)) 20px calc(16px + env(safe-area-inset-bottom));
+  padding:calc(22px + env(safe-area-inset-top)) 22px calc(14px + env(safe-area-inset-bottom));
   display:flex;flex-direction:column;
-  gap:18px;
+  gap:14px;
 }
+.icon-svg{width:18px;height:18px;display:block;}
 
 .hdr{display:flex;justify-content:space-between;align-items:flex-start;}
-.brand{display:flex;flex-direction:column;line-height:1.1;}
-.brand .word{
-  font-family:'Cinzel',Georgia,serif;font-size:1.3rem;letter-spacing:0.06em;
-  color:var(--gold);display:flex;align-items:center;gap:6px;
-}
-.brand .word .spark{font-size:0.8rem;}
-.brand .sub{
-  font-family:'JetBrains Mono',monospace;font-size:0.5rem;letter-spacing:0.25em;
-  color:rgba(243,241,236,0.35);margin-top:2px;margin-left:1px;
-}
-.datebox{text-align:right;}
-.datebox .day{
-  font-family:'Cinzel',Georgia,serif;font-size:0.95rem;color:var(--gold);
-}
-.datebox .full{
-  font-family:'JetBrains Mono',monospace;font-size:0.58rem;
-  color:var(--fog);margin-top:2px;
-}
-.weather{
-  display:flex;align-items:center;gap:6px;justify-content:flex-end;
-  margin-top:8px;
-}
-.weather .temp{font-size:1.05rem;color:var(--ink);}
-.weather .icon{font-size:1rem;}
-.weather .cond{
-  font-family:'JetBrains Mono',monospace;font-size:0.5rem;color:var(--fog);
-  display:block;text-align:right;margin-top:1px;
-}
-
-.greet{margin-top:2px;}
 .greet .h1{font-size:1.5rem;color:var(--ink);}
 .greet .h2{
   font-family:'JetBrains Mono',monospace;font-size:0.68rem;
   color:var(--fog);margin-top:4px;line-height:1.5;
 }
+.greet .underline{width:28px;height:1px;background:rgba(255,255,255,0.22);margin-top:14px;}
 
-.middle{
-  flex:1;min-height:0;
-  display:flex;align-items:center;justify-content:center;
-  gap:14px;
+.ring-btn{
+  flex:none;width:38px;height:38px;border-radius:50%;
+  border:1px solid rgba(202,168,118,0.4);
+  background:none;position:relative;
 }
-.rail{
-  flex:none;
-  display:flex;flex-direction:column;align-items:center;gap:6px;
-  padding:10px 8px;
-  background:var(--card);
-  border:1px solid var(--card-border);
-  border-radius:26px;
-  backdrop-filter:blur(10px);
-  -webkit-backdrop-filter:blur(10px);
+.ring-btn::after{
+  content:'';position:absolute;width:5px;height:5px;border-radius:50%;
+  background:var(--gold);box-shadow:0 0 6px 1px rgba(202,168,118,0.7);
+  top:1px;right:6px;
 }
-.rail-btn{
-  width:38px;height:38px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-  font-size:1.05rem;color:var(--gold-dim);
-  background:none;border:none;
-  transition:background 0.15s ease, color 0.15s ease;
-}
-.icon-svg{width:18px;height:18px;display:block;}
-.rail-btn.active{background:rgba(255,255,255,0.12);color:var(--ink);}
-.rail-btn:active{background:rgba(255,255,255,0.08);}
+.ring-btn:active{background:rgba(255,255,255,0.06);}
 
-.moonstage{
-  flex:1;min-width:0;
+.carousel{flex:1;min-height:0;overflow:hidden;position:relative;}
+.carousel-track{
+  display:flex;height:100%;
+  transition:transform 0.32s cubic-bezier(.2,.8,.2,1);
+}
+.cpage{
+  flex:0 0 100%;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:14px;
+  gap:12px;
 }
-.orbit-wrap{position:relative;width:min(50vw, 190px);aspect-ratio:1;}
-.orbit-ring{
-  position:absolute;inset:0;border-radius:50%;
-  border:1px solid rgba(202,168,118,0.16);
-}
+
+.orbit-wrap{position:relative;width:min(46vw, 180px);aspect-ratio:1;}
+.orbit-ring{position:absolute;inset:0;border-radius:50%;border:1px solid rgba(202,168,118,0.16);}
 .orbit-ring.r2{inset:-16px;border-color:rgba(202,168,118,0.09);}
 .orbit-dot{
   position:absolute;width:5px;height:5px;border-radius:50%;
@@ -119,115 +80,102 @@ html,body{
 @keyframes orbit{ to{ transform:rotate(360deg); } }
 #moonCanvas{position:absolute;inset:14%;border-radius:50%;}
 
-.eventcard{
-  width:100%;max-width:340px;
-  display:flex;align-items:center;justify-content:space-between;
-  gap:12px;padding:14px 16px;
-  background:var(--card);
-  border:1px solid var(--card-border);
-  border-radius:16px;
-  backdrop-filter:blur(10px);
-  -webkit-backdrop-filter:blur(10px);
+.wpage .wicon{color:var(--gold);}
+.wpage .wtemp{font-size:2.6rem;color:var(--ink);margin-top:6px;}
+.wpage .wcond{
+  font-family:'JetBrains Mono',monospace;font-size:0.62rem;letter-spacing:0.04em;
+  color:var(--fog);text-transform:uppercase;
 }
-.eventcard .lbl{
-  font-family:'JetBrains Mono',monospace;font-size:0.5rem;letter-spacing:0.05em;
-  color:var(--gold-dim);text-transform:uppercase;
-}
-.eventcard .ttl{font-size:0.95rem;color:var(--ink);margin-top:3px;}
-.eventcard .sub{
-  font-family:'JetBrains Mono',monospace;font-size:0.56rem;color:var(--fog);margin-top:3px;
-}
-.eventcard .glyph{
-  flex:none;width:36px;height:36px;border-radius:10px;
+
+.epage .eglyph{
+  width:52px;height:52px;border-radius:14px;
   background:rgba(202,168,118,0.12);
-  display:flex;align-items:center;justify-content:center;font-size:1rem;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--gold);
+}
+.epage .elbl{
+  font-family:'JetBrains Mono',monospace;font-size:0.52rem;letter-spacing:0.08em;
+  color:var(--gold-dim);text-transform:uppercase;margin-top:10px;
+}
+.epage .ettl{font-size:1.15rem;color:var(--ink);margin-top:4px;}
+.epage .esub{
+  font-family:'JetBrains Mono',monospace;font-size:0.6rem;color:var(--fog);margin-top:4px;
 }
 
-.slider{
-  flex:none;
-  width:34px;height:190px;
-  display:flex;flex-direction:column;align-items:center;justify-content:space-between;
-  padding:12px 0;
+.apage .aorb{
+  width:56px;height:56px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%, rgba(255,236,205,0.95), rgba(202,168,118,0.3) 65%);
+  box-shadow:0 0 18px 3px rgba(202,168,118,0.4);
+}
+.apage .attl{font-size:1.1rem;color:var(--ink);margin-top:8px;}
+.askbar{
+  display:flex;align-items:center;gap:10px;
+  padding:11px 9px 11px 15px;
+  width:min(280px, 78vw);
   background:var(--card);
   border:1px solid var(--card-border);
-  border-radius:20px;
-  backdrop-filter:blur(10px);
-  -webkit-backdrop-filter:blur(10px);
-  position:relative;
+  border-radius:24px;
+  margin-top:6px;
 }
-.slider .sicon{font-size:0.85rem;color:var(--gold-dim);z-index:2;}
-.slider-track{
-  position:absolute;left:50%;top:34px;bottom:34px;width:3px;
-  background:rgba(255,255,255,0.12);border-radius:2px;
-  transform:translateX(-50%);
+.askbar input{
+  flex:1;background:none;border:none;outline:none;
+  font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--ink);
 }
-.slider-fill{
-  position:absolute;left:50%;bottom:34px;width:3px;
-  background:linear-gradient(180deg, var(--gold), rgba(202,168,118,0.3));
-  border-radius:2px;
-  transform:translateX(-50%);
-}
-.slider-thumb{
-  position:absolute;left:50%;width:16px;height:16px;border-radius:50%;
-  background:var(--ink);
-  box-shadow:0 0 10px 2px rgba(202,168,118,0.5);
-  transform:translate(-50%,50%);
-  z-index:3;
+.askbar input::placeholder{color:rgba(243,241,236,0.35);}
+.askbar .orb{
+  flex:none;width:30px;height:30px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%, rgba(255,236,205,0.95), rgba(202,168,118,0.3) 65%);
+  box-shadow:0 0 12px 2px rgba(202,168,118,0.4);
+  border:none;
 }
 
-.quick{width:100%;}
+.dots{display:flex;justify-content:center;gap:7px;}
+.dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.18);transition:background 0.2s ease, transform 0.2s ease;}
+.dot.active{background:var(--gold);transform:scale(1.3);}
+
+.datebar{
+  display:flex;align-items:center;justify-content:center;gap:18px;
+  flex:none;
+}
+.datebar .dcol .dname{font-family:'JetBrains Mono',monospace;font-size:0.54rem;letter-spacing:0.12em;color:var(--gold-dim);}
+.datebar .dcol .dnum{font-size:1.7rem;color:var(--ink);line-height:1.15;}
+.datebar .dcol .dmonth{font-family:'JetBrains Mono',monospace;font-size:0.5rem;letter-spacing:0.12em;color:var(--fog);}
+.datebar .divider{width:1px;height:36px;background:rgba(255,255,255,0.12);}
+.datebar .wcol{display:flex;align-items:center;gap:7px;}
+.datebar .wcol .wtemp2{font-size:1.15rem;color:var(--ink);}
+.datebar .wcol .wcond2{font-family:'JetBrains Mono',monospace;font-size:0.5rem;color:var(--fog);display:block;margin-top:1px;}
+
+.quick{flex:none;width:100%;}
 .quick .lbl{
-  font-family:'JetBrains Mono',monospace;font-size:0.58rem;letter-spacing:0.08em;
-  color:var(--fog);text-align:center;margin-bottom:10px;
+  font-family:'JetBrains Mono',monospace;font-size:0.56rem;letter-spacing:0.08em;
+  color:var(--fog);text-align:center;margin-bottom:9px;
 }
-.quick-grid{
-  display:grid;grid-template-columns:repeat(4,1fr);gap:10px;
-}
+.quick-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
 .qbtn{
   display:flex;flex-direction:column;align-items:center;gap:7px;
   background:none;border:none;color:var(--ink);
 }
 .qbtn .box{
-  width:56px;height:56px;border-radius:16px;
+  width:52px;height:52px;border-radius:15px;
   background:var(--card);
   border:1px solid var(--card-border);
   display:flex;align-items:center;justify-content:center;
-  font-size:1.3rem;color:var(--gold);
+  color:var(--gold);
   transition:transform 0.12s ease, background 0.12s ease;
 }
 .qbtn:active .box{transform:scale(0.93);background:rgba(255,255,255,0.09);}
-.qbtn.orak .box{
-  background:radial-gradient(circle at 35% 30%, rgba(255,236,205,0.9), rgba(202,168,118,0.25) 60%);
-  box-shadow:0 0 16px 2px rgba(202,168,118,0.35);
-}
-.qbtn .qlabel{
-  font-family:'JetBrains Mono',monospace;font-size:0.54rem;color:var(--fog);
-}
+.qbtn .qlabel{font-family:'JetBrains Mono',monospace;font-size:0.53rem;color:var(--fog);}
 
-.searchbar{
-  display:flex;align-items:center;gap:10px;
-  padding:12px 10px 12px 16px;
-  background:var(--card);
-  border:1px solid var(--card-border);
-  border-radius:26px;
-  backdrop-filter:blur(10px);
-  -webkit-backdrop-filter:blur(10px);
-}
-.searchbar .s-icon{color:var(--gold-dim);font-size:0.85rem;}
-.searchbar input{
-  flex:1;background:none;border:none;outline:none;
-  font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:var(--ink);
-}
-.searchbar input::placeholder{color:rgba(243,241,236,0.35);}
-.searchbar .orb{
-  flex:none;width:34px;height:34px;border-radius:50%;
-  background:radial-gradient(circle at 35% 30%, rgba(255,236,205,0.95), rgba(202,168,118,0.3) 65%);
-  box-shadow:0 0 14px 2px rgba(202,168,118,0.4);
-  border:none;
+.chevron-btn{
+  flex:none;align-self:center;
+  width:36px;height:24px;
+  display:flex;align-items:center;justify-content:center;
+  color:rgba(243,241,236,0.4);
+  background:none;border:none;
 }
 
 .toast{
-  position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));
+  position:fixed;left:50%;bottom:calc(70px + env(safe-area-inset-bottom));
   transform:translateX(-50%) translateY(10px);
   background:rgba(10,12,16,0.92);
   border:1px solid var(--card-border);
@@ -237,100 +185,97 @@ html,body{
   opacity:0;pointer-events:none;
   transition:opacity 0.2s ease, transform 0.2s ease;
   z-index:20;
+  white-space:nowrap;
 }
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
-
-.upward-hint{
-  position:fixed;bottom:calc(6px + env(safe-area-inset-bottom));left:50%;
-  transform:translateX(-50%);
-  font-family:'JetBrains Mono',monospace;font-size:0.5rem;
-  color:rgba(243,241,236,0.3);letter-spacing:0.05em;
-}
 </style>
 
 <div class="bg"></div>
 <div class="wrap">
   <div class="hdr">
-    <div class="brand">
-      <div class="word"><span>ORAK</span><span class="spark">✦</span></div>
-      <div class="sub">UNIVERSE</div>
+    <div class="greet">
+      <div class="h1" id="greetLine">Buen día, Jack.</div>
+      <div class="h2">Todo listo para crear hoy.</div>
+      <div class="underline"></div>
     </div>
-    <div class="datebox">
-      <div class="day" id="dayName">--</div>
-      <div class="full" id="fullDate">-- ----- ----</div>
-      <div class="weather"><svg class="icon-svg" style="color:var(--fog);width:16px;height:16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7 17h10a3.5 3.5 0 0 0 .5-6.96A5 5 0 0 0 8 8.2 3.5 3.5 0 0 0 7 17Z"/></svg><span class="temp">26°</span></div>
-      <span class="cond">Nublado</span>
-    </div>
+    <button class="ring-btn" id="ringBtn"></button>
   </div>
 
-  <div class="greet">
-    <div class="h1" id="greetLine">Buen día, Jack.</div>
-    <div class="h2">Todo listo para crear hoy.</div>
-  </div>
-
-  <div class="middle">
-    <div class="rail" id="rail">
-      <button class="rail-btn active" data-tip="inicio"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9h12v-9"/></svg></button>
-      <button class="rail-btn" data-tip="explorar tus apps">✦</button>
-      <button class="rail-btn" data-tip="biblioteca"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 6c-1.8-1.2-4-1.6-6-1.2v13c2-.4 4.2 0 6 1.2 1.8-1.2 4-1.6 6-1.2V4.8c-2-.4-4.2 0-6 1.2Z"/><path d="M12 6v13"/></svg></button>
-      <button class="rail-btn" data-tip="escribir">✎</button>
-      <button class="rail-btn" data-tip="social"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="8" r="2.6"/><path d="M4 19c0-3 2.5-5 5-5s5 2 5 5"/><circle cx="17" cy="9" r="2.1"/><path d="M14.8 14.2c2-.3 4.2.9 4.2 3.8"/></svg></button>
-      <button class="rail-btn" data-tip="ajustes">⚙</button>
-    </div>
-
-    <div class="moonstage">
-      <div class="orbit-wrap">
-        <div class="orbit-ring r2"></div>
-        <div class="orbit-ring"></div>
-        <div class="orbit-dot"></div>
-        <canvas id="moonCanvas"></canvas>
-      </div>
-      <div class="eventcard">
-        <div>
-          <div class="lbl">próximo evento</div>
-          <div class="ttl">Escritura colectiva</div>
-          <div class="sub">20:00 — Capítulo 5</div>
+  <div class="carousel" id="carousel">
+    <div class="carousel-track" id="carouselTrack">
+      <div class="cpage">
+        <div class="orbit-wrap">
+          <div class="orbit-ring r2"></div>
+          <div class="orbit-ring"></div>
+          <div class="orbit-dot"></div>
+          <canvas id="moonCanvas"></canvas>
         </div>
-        <div class="glyph"><svg class="icon-svg" style="color:var(--gold);width:17px;height:17px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="5.5" width="16" height="14" rx="2"/><path d="M4 9.5h16M8 3.5v3M16 3.5v3"/></svg></div>
+      </div>
+      <div class="cpage wpage">
+        <svg class="wicon" style="width:44px;height:44px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M7 17h10a3.5 3.5 0 0 0 .5-6.96A5 5 0 0 0 8 8.2 3.5 3.5 0 0 0 7 17Z"/></svg>
+        <div class="wtemp">26°</div>
+        <div class="wcond">Nublado · Jueves</div>
+      </div>
+      <div class="cpage epage">
+        <div class="eglyph"><svg class="icon-svg" style="width:24px;height:24px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="5.5" width="16" height="14" rx="2"/><path d="M4 9.5h16M8 3.5v3M16 3.5v3"/></svg></div>
+        <div class="elbl">próximo evento</div>
+        <div class="ettl">Escritura colectiva</div>
+        <div class="esub">20:00 — Capítulo 5</div>
+      </div>
+      <div class="cpage apage">
+        <div class="aorb"></div>
+        <div class="attl">Orak AI</div>
+        <div class="askbar">
+          <input type="text" id="askInput" placeholder="Pregúntale a Orak…" autocomplete="off" spellcheck="false">
+          <button class="orb" id="askOrb"></button>
+        </div>
       </div>
     </div>
+  </div>
+  <div class="dots" id="dots">
+    <span class="dot active"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+  </div>
 
-    <div class="slider" id="slider">
-      <span class="sicon">☀</span>
-      <div class="slider-track"></div>
-      <div class="slider-fill" id="sliderFill"></div>
-      <div class="slider-thumb" id="sliderThumb"></div>
-      <span class="sicon">☾</span>
+  <div class="datebar">
+    <div class="dcol">
+      <div class="dname" id="dayName">--</div>
+      <div class="dnum" id="dayNum">--</div>
+      <div class="dmonth" id="monthName">---</div>
+    </div>
+    <div class="divider"></div>
+    <div class="wcol">
+      <svg class="icon-svg" style="color:var(--fog);width:20px;height:20px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7 17h10a3.5 3.5 0 0 0 .5-6.96A5 5 0 0 0 8 8.2 3.5 3.5 0 0 0 7 17Z"/></svg>
+      <div>
+        <div class="wtemp2">26°</div>
+        <span class="wcond2">Nublado</span>
+      </div>
     </div>
   </div>
 
   <div class="quick">
     <div class="lbl">ACCESOS RÁPIDOS</div>
     <div class="quick-grid">
-      <button class="qbtn" data-tip="explorar">
-        <span class="box"><svg class="icon-svg" style="width:24px;height:24px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="5"/><ellipse cx="12" cy="12" rx="10" ry="3.2" transform="rotate(-18 12 12)"/></svg></span><span class="qlabel">Explorar</span>
-      </button>
       <button class="qbtn" data-tip="mensajes">
         <span class="box"><svg class="icon-svg" style="width:22px;height:22px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7A2.5 2.5 0 0 1 17.5 16H10l-4.5 3.5V16H6.5A2.5 2.5 0 0 1 4 13.5v-7Z"/><circle cx="9" cy="10" r="0.9" fill="currentColor" stroke="none"/><circle cx="12" cy="10" r="0.9" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="0.9" fill="currentColor" stroke="none"/></svg></span><span class="qlabel">Mensajes</span>
       </button>
-      <button class="qbtn" data-tip="biblioteca">
-        <span class="box"><svg class="icon-svg" style="width:22px;height:22px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 6c-1.8-1.2-4-1.6-6-1.2v13c2-.4 4.2 0 6 1.2 1.8-1.2 4-1.6 6-1.2V4.8c-2-.4-4.2 0-6 1.2Z"/><path d="M12 6v13"/></svg></span><span class="qlabel">Biblioteca</span>
+      <button class="qbtn" data-tip="telefono">
+        <span class="box"><svg class="icon-svg" style="width:20px;height:20px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6.6 10.8c1.4 2.8 3.8 5.2 6.6 6.6l2.2-2.2c.3-.3.7-.4 1.1-.3 1.2.4 2.5.6 3.8.6.6 0 1 .4 1 1v3.4c0 .6-.4 1-1 1C10.6 21 3 13.4 3 3.9c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.6.6 3.8.1.4 0 .8-.3 1.1L6.6 10.8Z"/></svg></span><span class="qlabel">Teléfono</span>
       </button>
-      <button class="qbtn orak" id="orakQuick">
-        <span class="box">✦</span><span class="qlabel">Orak AI</span>
+      <button class="qbtn" data-tip="explorar">
+        <span class="box"><svg class="icon-svg" style="width:24px;height:24px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="5"/><ellipse cx="12" cy="12" rx="10" ry="3.2" transform="rotate(-18 12 12)"/></svg></span><span class="qlabel">Explorar</span>
+      </button>
+      <button class="qbtn" data-tip="camara">
+        <span class="box"><svg class="icon-svg" style="width:22px;height:22px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1-2h7l1 2h2A1.5 1.5 0 0 1 20 8.5v9A1.5 1.5 0 0 1 18.5 19h-13A1.5 1.5 0 0 1 4 17.5v-9Z"/><circle cx="12" cy="12.5" r="3.2"/></svg></span><span class="qlabel">Cámara</span>
       </button>
     </div>
   </div>
 
-  <div class="searchbar">
-    <span class="s-icon">✦</span>
-    <input type="text" id="askInput" placeholder="Pregúntale a Orak…" autocomplete="off" spellcheck="false">
-    <button class="orb" id="askOrb"></button>
-  </div>
+  <button class="chevron-btn" id="chevronBtn">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 15l7-7 7 7"/></svg>
+  </button>
 </div>
 
 <div class="toast" id="toast"></div>
-<div class="upward-hint">desliza hacia arriba: todas tus apps</div>
 
 <script>
 // Saludo + fecha reales — mismo lenguaje que el resto de orakOS: nada
@@ -343,7 +288,8 @@ function tick(){
   const saludo = h < 12 ? 'Buen día' : h < 19 ? 'Buenas tardes' : 'Buenas noches';
   document.getElementById('greetLine').textContent = `${saludo}, Jack.`;
   document.getElementById('dayName').textContent = DIAS[now.getDay()];
-  document.getElementById('fullDate').textContent = `${now.getDate()} ${MESES[now.getMonth()]}, ${now.getFullYear()}`;
+  document.getElementById('dayNum').textContent = now.getDate();
+  document.getElementById('monthName').textContent = MESES[now.getMonth()];
 }
 tick();
 setInterval(tick, 60000);
@@ -354,6 +300,7 @@ const moonCv = document.getElementById('moonCanvas');
 const mctx = moonCv.getContext('2d');
 function fitMoon(){
   const r = moonCv.getBoundingClientRect();
+  if(!r.width) return;
   moonCv.width = r.width; moonCv.height = r.height;
   drawMoon();
 }
@@ -369,7 +316,6 @@ function drawMoon(){
   mctx.arc(cx, cy, r, 0, Math.PI*2);
   mctx.fillStyle = base;
   mctx.fill();
-  // filo iluminado, tipo cuarto creciente
   const rim = mctx.createRadialGradient(cx+r*0.55, cy, 0, cx+r*0.55, cy, r*0.9);
   rim.addColorStop(0, 'rgba(255,224,170,0.9)');
   rim.addColorStop(0.5, 'rgba(202,168,118,0.25)');
@@ -394,70 +340,69 @@ function showToast(msg){
   toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1800);
 }
 
-document.querySelectorAll('.rail-btn:not(.active)').forEach(btn => {
-  btn.addEventListener('click', () => {
-    if(btn.dataset.tip === 'explorar tus apps'){
-      window.location.href = 'launcher.html';
-    } else {
-      showToast('próximamente');
-    }
-  });
-});
-document.querySelectorAll('.qbtn:not(#orakQuick)').forEach(btn => {
+document.getElementById('ringBtn').addEventListener('click', () => showToast('ajustes — próximamente'));
+document.querySelectorAll('.qbtn').forEach(btn => {
   btn.addEventListener('click', () => showToast('próximamente'));
 });
-document.getElementById('orakQuick').addEventListener('click', () => {
-  document.getElementById('askInput').focus();
-});
 function askSubmit(){
-  const v = document.getElementById('askInput').value.trim();
-  if(!v) return;
+  const input = document.getElementById('askInput');
+  if(!input.value.trim()) return;
   showToast('Vela todavía no puede responder aquí — pronto');
-  document.getElementById('askInput').value = '';
+  input.value = '';
 }
 document.getElementById('askOrb').addEventListener('click', askSubmit);
 document.getElementById('askInput').addEventListener('keydown', e => { if(e.key === 'Enter') askSubmit(); });
+document.getElementById('askInput').addEventListener('mousedown', e => e.stopPropagation());
+document.getElementById('askInput').addEventListener('touchstart', e => e.stopPropagation());
 
-// El slider de brillo/día-noche: arrastrable, y de verdad atenúa la escena
-// un poco — no es solo decoración, aunque no esté conectado a nada externo.
-const sliderEl = document.getElementById('slider');
-const thumbEl = document.getElementById('sliderThumb');
-const fillEl = document.getElementById('sliderFill');
-let sliderVal = 0.6; // 0 = noche, 1 = día
-function renderSlider(){
-  const track = sliderEl.clientHeight - 68;
-  const y = 34 + (1-sliderVal)*track;
-  thumbEl.style.bottom = (sliderEl.clientHeight - y) + 'px';
-  fillEl.style.height = Math.max(0, sliderEl.clientHeight - y - 34) + 'px';
-  document.querySelector('.bg').style.filter = `brightness(${0.75 + sliderVal*0.5})`;
+// El botón de flecha, igual que deslizar arriba, abre la escalera con todas
+// tus apps reales — el "launcher" completo que ya construimos.
+document.getElementById('chevronBtn').addEventListener('click', () => {
+  window.location.href = 'launcher.html';
+});
+
+// ── Carrusel de la luna/clima/evento/Orak AI — cuatro páginas que se
+// deslizan horizontal, con los puntos abajo marcando en cuál estás ──────
+const carouselEl = document.getElementById('carousel');
+const trackEl = document.getElementById('carouselTrack');
+const dotEls = document.querySelectorAll('.dot');
+const PAGE_COUNT = 4;
+let pageIndex = 0;
+function renderPage(){
+  trackEl.style.transform = `translateX(${-pageIndex*100}%)`;
+  dotEls.forEach((d,i) => d.classList.toggle('active', i === pageIndex));
 }
-function setSliderFromClientY(clientY){
-  const rect = sliderEl.getBoundingClientRect();
-  const usable = rect.height - 68;
-  const rel = (rect.bottom - 34 - clientY) / usable;
-  sliderVal = Math.min(1, Math.max(0, rel));
-  renderSlider();
-}
-let draggingSlider = false;
-sliderEl.addEventListener('touchstart', e => { draggingSlider = true; setSliderFromClientY(e.touches[0].clientY); }, {passive:true});
-sliderEl.addEventListener('touchmove', e => { if(draggingSlider){ setSliderFromClientY(e.touches[0].clientY); e.preventDefault(); } }, {passive:false});
-window.addEventListener('touchend', () => { draggingSlider = false; });
-sliderEl.addEventListener('mousedown', e => { draggingSlider = true; setSliderFromClientY(e.clientY); });
-window.addEventListener('mousemove', e => { if(draggingSlider) setSliderFromClientY(e.clientY); });
-window.addEventListener('mouseup', () => { draggingSlider = false; });
-requestAnimationFrame(renderSlider);
+let cStartX = 0, cDeltaX = 0, cDragging = false;
+carouselEl.addEventListener('touchstart', e => {
+  if(e.target.closest('input')) return;
+  cStartX = e.touches[0].clientX;
+  cDragging = true;
+  trackEl.style.transition = 'none';
+}, {passive:true});
+carouselEl.addEventListener('touchmove', e => {
+  if(!cDragging || !e.touches.length) return;
+  cDeltaX = e.touches[0].clientX - cStartX;
+  trackEl.style.transform = `translateX(calc(${-pageIndex*100}% + ${cDeltaX}px))`;
+}, {passive:true});
+carouselEl.addEventListener('touchend', () => {
+  if(!cDragging) return;
+  cDragging = false;
+  trackEl.style.transition = 'transform 0.32s cubic-bezier(.2,.8,.2,1)';
+  if(cDeltaX < -50 && pageIndex < PAGE_COUNT-1) pageIndex++;
+  else if(cDeltaX > 50 && pageIndex > 0) pageIndex--;
+  cDeltaX = 0;
+  renderPage();
+});
 
 // Deslizar hacia arriba desde el cuerpo de la pantalla abre la escalera con
-// todas tus apps reales — el "launcher" completo que ya construimos.
-// Solo cuenta si el gesto EMPIEZA cerca de abajo (donde dice la pista) y
-// recorre bastante distancia — cualquier toque en otro lado de la pantalla
-// (los botones de arriba, un tap con algo de arrastre sin querer) lo estaba
-// activando por accidente antes de este ajuste.
+// todas tus apps reales — mismo destino que el botón de flecha, para quien
+// prefiera el gesto. Solo cuenta si EMPIEZA cerca de abajo y recorre
+// bastante distancia, para no dispararse con un toque cualquiera.
 let swipeStartY = 0, swipeTracking = false, swipeMoved = false;
 document.addEventListener('touchstart', e => {
-  if(e.target.closest('.slider') || e.target.closest('.searchbar') || e.target.closest('input')) return;
+  if(e.target.closest('input') || e.target.closest('.carousel')) return;
   const y = e.touches[0].clientY;
-  swipeTracking = y > window.innerHeight * 0.78;
+  swipeTracking = y > window.innerHeight * 0.8;
   swipeStartY = y;
   swipeMoved = false;
 }, {passive:true});
